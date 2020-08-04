@@ -395,6 +395,14 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
+                  - "s3:GetObject"
+                Resource: !Sub 'arn:${AWS::Partition}:s3:::${LambdaZipsBucketName}/functions/packages/*'
+        - PolicyName: ResourceTypePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
                   - "cloudformation:*"
                   - "iam:PassRole"
                   - "iam:CreateRole"
@@ -406,6 +414,7 @@ Resources:
                   - "ssm:GetParameter"
                   - "ssm:PutParameter"
                   - "sts:GetCallerIdentity"
+                  - "s3:GetObject"
                 Resource: "*"
   RegisterCustomResourceRole:
     Type: AWS::IAM::Role
