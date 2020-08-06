@@ -132,7 +132,7 @@ Resources:
     Properties:
       ServiceToken: !GetAtt RegisterTypeFunction.Arn
       TypeName: "AWSQS::Kubernetes::Helm"
-      Version: "1.0.0-beta4"
+      Version: "2.0.0-beta1"
       SchemaHandlerPackage: !Sub
         - "s3://${BN}/${KP}"
         - BN: !Sub ['${P}-${AWS::Region}', {P: !FindInMap [Config, Bucket, Bucket]}]
