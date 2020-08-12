@@ -8,6 +8,7 @@ RUN pip install -t . -r ./requirements.txt && \
     find . -name "*.pth"  -exec rm -rf {} \; | true && \
     find . -name "__pycache__"  -exec rm -rf {} \; | true && \
     rm Dockerfile requirements.txt && \
+    curl -o awscli-exe-linux-x86_64.zip https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip && \
     find . -exec touch -t 202007010000.00 {} + && \
     zip -X -r lambda.zip ./
 

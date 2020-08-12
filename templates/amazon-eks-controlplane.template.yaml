@@ -12,9 +12,7 @@ Parameters:
     Type: String
   NodeInstanceRoleArn:
     Type: String
-  CleanupLoadBalancersLambdaArn:
-    Type: String
-  GetCallerArnLambdaArn:
+  WindowsNodeInstanceRoleArn:
     Type: String
   AdditionalEKSAdminUserArn:
     Type: String
@@ -55,13 +53,14 @@ Parameters:
   IamOidcProvider:
     Type: String
     AllowedValues: [ "Enabled", "Disabled" ]
-    Default: "Disabled"
+    Default: "Enabled"
   EKSClusterName:
     Type: String
 Conditions:
   AddUser: !Not [ !Equals [ !Ref AdditionalEKSAdminUserArn, "" ] ]
   AddRole: !Not [ !Equals [ !Ref AdditionalEKSAdminRoleArn, "" ] ]
   BastionRole: !Not [ !Equals [ !Ref BastionRole, "" ] ]
+  WindowsRole: !Not [ !Equals [ !Ref WindowsNodeInstanceRoleArn, "" ] ]
   EnablePrivateEndpoint: !Equals [ !Ref EKSPrivateAccessEndpoint, "Enabled" ]
   EnablePublicEndpoint: !Equals [ !Ref EKSPublicAccessEndpoint, "Enabled" ]
   CreateKey: !And
@@ -70,6 +69,9 @@ Conditions:
   EnableEncryption: !Equals [ !Ref EKSEncryptSecrets, Enabled ]
   LoggingEnabled: !Not [ !Equals [ !Select [ 0, !Ref EKSClusterLoggingTypes ], "" ] ]
   EnableIamOidcProvider: !Equals [!Ref 'IamOidcProvider', 'Enabled']
+Mappings:
+  Config:
+    Prefix: { Value: 'eks-quickstart' }
 Resources:
   KMSKey:
     Condition: CreateKey
@@ -120,6 +122,16 @@ Resources:
           - Arn: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/awsqs-kubernetes-helm"
             Username: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/awsqs-kubernetes-helm"
             Groups: [ 'system:masters' ]
+          - Arn: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/awsqs-kubernetes-get"
+            Username: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/awsqs-kubernetes-get"
+            Groups: [ 'system:masters' ]
+          - Arn: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/awsqs-kubernetes-resource"
+            Username: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/awsqs-kubernetes-resource"
+            Groups: [ 'system:masters' ]
+          # We don't know whether GetCallerArn returned a user arn or a role arn, so we just add it to both
+          - Arn: !GetAtt CallerArn.Arn
+            Username: !GetAtt CallerArn.Arn
+            Groups: [ 'system:masters' ]
           - !If
             - BastionRole
             - Arn: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${BastionRole}"
@@ -132,7 +144,14 @@ Resources:
               Username: !Ref AdditionalEKSAdminRoleArn
               Groups: [ 'system:masters' ]
             - !Ref 'AWS::NoValue'
+          - !If 
+            - WindowsRole
+            - Arn: !Ref WindowsNodeInstanceRoleArn
+              Username: system:node:{{EC2PrivateDNSName}}
+              Groups: [ 'system:bootstrappers', 'system:nodes', 'eks:kube-proxy-windows']
+            - !Ref 'AWS::NoValue'
         Users:
+          # We don't know whether GetCallerArn returned a user arn or a role arn, so we just add it to both
           - Arn: !GetAtt CallerArn.Arn
             Username: !GetAtt CallerArn.Arn
             Groups: [ 'system:masters' ]
@@ -145,12 +164,12 @@ Resources:
   CleanupLoadBalancers:
     Type: Custom::CleanupLoadBalancers
     Properties:
-      ServiceToken: !Ref CleanupLoadBalancersLambdaArn
+      ServiceToken: !Sub ['arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${Prefix}-CleanupLoadBalancers', {Prefix: !FindInMap [Config, Prefix, Value]}]
       ClusterName: !Ref EKS
   CallerArn:
     Type: Custom::GetCallerArn
     Properties:
-      ServiceToken: !Ref GetCallerArnLambdaArn
+      ServiceToken: !Sub ['arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${Prefix}-GetCallerArn', {Prefix: !FindInMap [Config, Prefix, Value]}]
   ClusterOIDCProvider:
     Condition: EnableIamOidcProvider
     Type: Custom::ClusterOIDCProvider
