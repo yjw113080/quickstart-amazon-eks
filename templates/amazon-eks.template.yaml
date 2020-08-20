@@ -258,7 +258,7 @@ Resources:
     Type: "AWS::CloudFormation::Stack"
     Properties:
       TemplateURL: !Sub
-        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/amazon-eks-nodegroup.template.yaml'
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-amazon-eks-nodegroup/templates/amazon-eks-nodegroup.template.yaml'
         - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
           S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
       Parameters:
@@ -287,7 +287,7 @@ Resources:
         KubernetesVersion: ~~/<ConfigSetName>/controlplane/KubernetesVersion~~
         BootstrapArguments: ~~/<ConfigSetName>/default-nodegroup/BootstrapArguments~~
         QSS3BucketName: !Ref QSS3BucketName
-        QSS3KeyPrefix: !Ref QSS3KeyPrefix
+        QSS3KeyPrefix: !Sub "${QSS3KeyPrefix}/submodules/quickstart-amazon-eks-nodegroup/"
         QSS3BucketRegion: !Ref QSS3BucketRegion
   WindowsNodeGroupStack:
     Condition: EnableWindows
@@ -297,7 +297,7 @@ Resources:
       cfn-lint: { config: { ignore_checks: [E9902] } }
     Properties:
       TemplateURL: !Sub
-        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/amazon-eks-windows-nodegroup.template.yaml'
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-amazon-eks-nodegroup/templates/amazon-eks-windows-nodegroup.template.yaml'
         - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
           S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
       Parameters:
