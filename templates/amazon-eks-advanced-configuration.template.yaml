@@ -138,6 +138,7 @@ Parameters:
     AllowedValues:
       - Amazon-Linux-HVM
       - SUSE-SLES-15-HVM
+      - BottleRocket
     Default: Amazon-Linux-HVM
     Type: String
     Description: Choose the operating system to be used for the default node group.
@@ -171,8 +172,8 @@ Parameters:
     Default: ''
   KubernetesVersion:
     Type: String
-    AllowedValues: [ "1.13", "1.14", "1.15", "1.16" ]
-    Default: "1.16"
+    AllowedValues: [ "1.15", "1.16", "1.17" ]
+    Default: "1.17"
     Description: The Kubernetes control plane version.
   IamOidcProvider:
     Type: String
