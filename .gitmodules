@@ -23,5 +23,5 @@
 	url = git@github.com:aws-quickstart/quickstart-kubernetes-resource-provider.git
 [submodule "submodules/quickstart-amazon-eks-nodegroup"]
 	path = submodules/quickstart-amazon-eks-nodegroup
-	url = https://github.com/aws-quickstart/quickstart-amazon-eks-nodegroup.git
+	url = git@github.com:aws-quickstart/quickstart-amazon-eks-nodegroup.git
 	branch = main
