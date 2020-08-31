@@ -3,7 +3,7 @@ Description: Configure advanced options for the Amazon EKS Quick Start. (qs-1r0q
 Metadata:
   ConfigSetName: !Ref ConfigSetName
   LintSpellExclude:
-    - https://github.com/awslabs/amazon-eks-ami/blob/master/files/bootstrap.sh
+    - https://github.com/awslabs/amazon-eks-ami/
     - Kubernetes
     - Encrypt
     - Mibps
@@ -183,7 +183,7 @@ Parameters:
   BootstrapArguments:
     Type: String
     Default: ""
-    Description: Bootstrap arguments to pass to the EKS node bootstrap script, available arguments are listed in https://github.com/awslabs/amazon-eks-ami/blob/master/files/bootstrap.sh .
+    Description: Bootstrap arguments to pass to the EKS node bootstrap script, available arguments are listed in https://github.com/awslabs/amazon-eks-ami/ .
   BastionOS:
     Type: String
     AllowedValues: [ "Amazon-Linux2-HVM", "Amazon-Linux-HVM", "CentOS-7-HVM", "Ubuntu-Server-14.04-LTS-HVM", "Ubuntu-Server-16.04-LTS-HVM", "SUSE-SLES-15-HVM" ]

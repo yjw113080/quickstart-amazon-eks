@@ -3,7 +3,7 @@ project:
   owner: quickstart-eng@amazon.com
   regions:
   - me-south-1
-  template: templates/amazon-eks-master.template.yaml
+  template: templates/amazon-eks-entrypoint-new-vpc.template.yaml
   parameters:
     RemoteAccessCIDR: 10.0.0.0/16
     QSS3BucketName: $[taskcat_autobucket]
