@@ -190,7 +190,7 @@ Conditions:
     - !Equals [!Ref 'ProvisionALBIngressController', 'Enabled']
     - !Equals [!Ref 'WindowsSupport', 'Enabled']
     - !Equals [~~/<ConfigSetName>/cluster/IamOidcProvider~~, "Enabled"]
-  UsingBottleRocket: !Equals [!Ref NodeAMIOS, 'BottleRocket']
+  UsingBottleRocket: !Equals [~~/<ConfigSetName>/nodegroup/NodeAMIOS~~, 'BottleRocket']
 Resources:
   BastionEksPermissions:
     Condition: EnableBastion
@@ -292,6 +292,7 @@ Resources:
         QSS3BucketRegion: !Ref QSS3BucketRegion
   BtlRktNodeGroupStack:
     Type: "AWS::CloudFormation::Stack"
+    Condition: UsingBottleRocket
     Properties:
       TemplateURL: !Sub
         - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-amazon-eks-nodegroup/templates/amazon-eks-bottlerocket-nodegroup.template.yaml'
