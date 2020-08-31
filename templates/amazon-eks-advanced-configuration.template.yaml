@@ -239,12 +239,6 @@ Mappings:
   Config:
     ParameterPrefix: { Value: '/quickstart/amazon-eks' }
 Resources:
-  LambdaZipsBucketNameParameter:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Type: String
-      Value: !Sub '{ "Value": "${NodeAMIOS}" }'
-      Name: !Sub ["${ParameterPrefix}/${ConfigSetName}/quickstart-s3-asset-location/LambdaZipsBucketName", {ParameterPrefix: !FindInMap [Config, ParameterPrefix, Value]}]
   NodeAMIOSParameter:
     Type: AWS::SSM::Parameter
     Properties:

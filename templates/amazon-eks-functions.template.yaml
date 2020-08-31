@@ -4,9 +4,6 @@ Metadata:
   QSLint:
     Exclusions: [W9002, W9003, W9004, W9006]
 Parameters:
-  LambdaZipsBucketName:
-    Description: Bucket Name where the lambda zip files should be placed
-    Type: String
   QSS3KeyPrefix:
     AllowedPattern: ^[0-9a-zA-Z-/.]*$
     ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters,
@@ -100,7 +97,7 @@ Resources:
       Runtime: python3.7
       Timeout: 900
       Code:
-        S3Bucket: !Ref LambdaZipsBucketName
+        S3Bucket: !Sub ['${Prefix}-lambdazips-${AWS::Region}-${AWS::AccountId}', {Prefix: !FindInMap [Config, Prefix, Value]}]
         S3Key: !Sub '${QSS3KeyPrefix}functions/packages/kubernetesResources/awsqs_kubernetes_get_vpc.zip'
       Environment:
         Variables:
@@ -122,7 +119,7 @@ Resources:
       Runtime: python3.7
       Timeout: 900
       Code:
-        S3Bucket: !Ref LambdaZipsBucketName
+        S3Bucket: !Sub ['${Prefix}-lambdazips-${AWS::Region}-${AWS::AccountId}', {Prefix: !FindInMap [Config, Prefix, Value]}]
         S3Key: !Sub '${QSS3KeyPrefix}functions/packages/kubernetesResources/awsqs_kubernetes_apply_vpc.zip'
       Environment:
         Variables:
@@ -144,7 +141,7 @@ Resources:
       Timeout: 900
       Layers: [!Ref GetKubectlLayerArn, !Ref GetCrhelperLayerArn, !Ref GetAwsCliLayerArn]
       Code:
-        S3Bucket: !Ref LambdaZipsBucketName
+        S3Bucket: !Sub ['${Prefix}-lambdazips-${AWS::Region}-${AWS::AccountId}', {Prefix: !FindInMap [Config, Prefix, Value]}]
         S3Key: !Sub '${QSS3KeyPrefix}functions/packages/KubeManifest/lambda.zip'
       Environment:
         Variables:
@@ -172,7 +169,7 @@ Resources:
           HTTP_PROXY: !If [NoProxy, !Ref 'AWS::NoValue', !Ref HttpProxy]
           NO_PROXY: !Sub '${GetVpcCidr},localhost,127.0.0.1,169.254.169.254,.internal'
       Code:
-        S3Bucket: !Ref LambdaZipsBucketName
+        S3Bucket: !Sub ['${Prefix}-lambdazips-${AWS::Region}-${AWS::AccountId}', {Prefix: !FindInMap [Config, Prefix, Value]}]
         S3Key: !Sub '${QSS3KeyPrefix}functions/packages/KubeGet/lambda.zip'
       VpcConfig:
         SecurityGroupIds: [!Ref ControlPlaneSecurityGroup]

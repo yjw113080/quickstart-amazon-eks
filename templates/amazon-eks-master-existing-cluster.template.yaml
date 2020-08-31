@@ -150,7 +150,6 @@ Resources:
         - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
           S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
       Parameters:
-        LambdaZipsBucketName: !Sub ['${Prefix}-lambdazips-${AWS::Region}-${AWS::AccountId}', {Prefix: !FindInMap [Config, Prefix, Value]}]
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
         KubernetesAdminRoleArn: !GetAtt IamStack.Outputs.KubernetesAdminRoleArn
         ControlPlaneSecurityGroup: !Ref ControlPlaneSecurityGroup
