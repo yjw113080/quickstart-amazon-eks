@@ -34,10 +34,14 @@ Parameters:
   BastionIAMRoleName:
     Type: String
     Default: ""
+  CloudFormationKubernetesVPCRoleExists:
+    Type: String
+    Default: ""
 Conditions:
   EnableBastionRole: !Equals [!Ref CreateBastionRole, "Enabled"]
   EnableWindowsRole: !Equals [!Ref CreateWindowsRole, "Enabled"]
   UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
+  CreateCloudFormationKubernetesVPCRole: !Not [!Equals [!Ref CloudFormationKubernetesVPCRoleExists, 'CloudFormation-Kubernetes-VPC']]
 Resources:
   KubernetesAdminRole:
     Type: "AWS::IAM::Role"
@@ -197,6 +201,24 @@ Resources:
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonEC2RoleforSSM'
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AmazonSSMManagedInstanceCore'
         - !Sub 'arn:${AWS::Partition}:iam::aws:policy/CloudWatchAgentServerPolicy'
+  CloudFormationKubernetesVPCRole:
+    Type: AWS::IAM::Role
+    Condition: CreateCloudFormationKubernetesVPCRole
+    DeletionPolicy: Retain
+    Metadata: { cfn-lint: { config: { ignore_checks: [W3011] } } }
+    Properties:
+      RoleName: CloudFormation-Kubernetes-VPC
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: "/"
+      ManagedPolicyArns:
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaENIManagementAccess'
 Outputs:
   KubernetesAdminRoleArn:
     Value: !GetAtt KubernetesAdminRole.Arn

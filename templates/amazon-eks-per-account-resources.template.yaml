@@ -350,21 +350,6 @@ Resources:
                   - "iam:CreateServiceLinkedRole"
                   - "ec2:DescribeSubnets"
                 Resource: "*"
-  CloudFormationKubernetesVPCRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: CloudFormation-Kubernetes-VPC
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      Path: "/"
-      ManagedPolicyArns:
-        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
-        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaENIManagementAccess'
   ParameterResolverRole:
     Type: AWS::IAM::Role
     Properties:
