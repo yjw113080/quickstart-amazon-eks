@@ -397,6 +397,10 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Metadata:
       cfn-lint: { config: { ignore_checks: [ W9901 ] } }
+      DependsOn:
+      - !If [CreatePerRegionSharedResources, !Ref RegionalSharedResources, !Ref 'AWS::NoValue']
+      - !If [CreatePerAccountSharedResources, !Ref AccountSharedResources, !Ref 'AWS::NoValue']
+      - !If [CreateAdvancedConfigWithDefaults, !Ref AdvancedConfigDefaultsStack, !Ref 'AWS::NoValue']
     Properties:
       TemplateURL: !Sub
         - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/amazon-eks.template.yaml'
