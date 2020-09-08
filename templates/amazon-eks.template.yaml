@@ -18,7 +18,7 @@ Parameters:
     Type: String
   QSS3BucketRegion:
     Default: 'us-east-1'
-    Description: The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is
+    Description: The Region where the Quick Start S3 bucket (QSS3BucketName) is
       hosted. When using your own bucket, you must specify this value.
     Type: String
   RemoteAccessCIDR:
@@ -53,11 +53,11 @@ Parameters:
   ManagedNodeGroup:
     AllowedValues: [ "yes", "no" ]
     Default: "no"
-    Description: Choose if you want to use a managed node group. If you select "yes", you must select Kubernetes Version 1.14 or higher.
+    Description: Choose "yes" if you want to use a managed node group.
     Type: String
   WindowsSupport:
     AllowedValues: ["Enabled", "Disabled"]
-    Description: Choose Enabled to create a Windows Nodegroup. If you choose "Enabled", you must select Kubernetes Version 1.14 or higher.
+    Description: Choose "Enabled" to create a Windows node group.
     Type: String
     Default: "Disabled"
   WindowsCustomAmiId:
@@ -137,7 +137,7 @@ Parameters:
   EKSClusterName:
     Type: String
     Default: ""
-    Description: "[OPTIONAL] Name for the EKS cluster, if left blank one will be auto-generated."
+    Description: "(Optional) Name for the EKS cluster. If left blank one will be auto-generated."
   SnykIntegrationId:
     Type: String
     Default: ""

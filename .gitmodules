@@ -21,6 +21,10 @@
 [submodule "functions/source/kubernetesResources"]
 	path = functions/source/kubernetesResources
 	url = git@github.com:aws-quickstart/quickstart-kubernetes-resource-provider.git
+[submodule "docs/boilerplate"]
+	path = docs/boilerplate
+	url = git@github.com:aws-quickstart/quickstart-documentation-base-common.git
+	branch = main
 [submodule "submodules/quickstart-amazon-eks-nodegroup"]
 	path = submodules/quickstart-amazon-eks-nodegroup
 	url = git@github.com:aws-quickstart/quickstart-amazon-eks-nodegroup.git

@@ -1,0 +1,1 @@
+This Quick Start assumes familiarity with Kubernetes concepts and usage. Sections that cover building AWS CloudFormation templates using the provided custom resources assume knowledge of authoring AWS CloudFormation templates.

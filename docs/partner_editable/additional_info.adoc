@@ -1,0 +1,91 @@
+== Test the deployment
+
+NOTE: These steps must be executed from a network that has access to the Kubernetes API, as configured by the **EKS public access endpoint** and **Kubernetes API public access CIDRs** parameters. Instructions for installing kubectl are available in the https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html[Amazon EKS documentation]. If you enabled the optional bastion host, you can connect to the bastion host by using SSH with the key pair that you specified during deployment and the IP address in that is displayed on the *Outputs* tab of the AWS CloudFormation stack. The bastion host already has kubectl installed and configured to be able to connect to the cluster. To test the CLI’s ability to connect to the cluster, run the following command.
+
+```
+$ kubectl version
+```
+
+Confirm that the output includes the Server Version, which indicates a successful connection the Kubernetes control plane:
+
+```
+Client Version: version.Info\{Major:"1", Minor:"11", GitVersion:"<version number>", GitCommit:"<commit ID>", GitTreeState:"clean", BuildDate:"2018-12-06T01:33:57Z", GoVersion:"go1.10.3", Compiler:"gc", Platform:"linux/amd64"}
+
+Server Version: version.Info\{Major:"1", Minor:"11+", GitVersion:" <version number>", GitCommit:" <commit ID>", GitTreeState:"clean", BuildDate:"2018-12-06T23:13:14Z", GoVersion:"go1.10.3", Compiler:"gc", Platform:"linux/amd64"}
+```
+
+[start=3]
+. Now check that the nodes have successfully connected to the cluster by running the get nodes command.
+
+```
+$ kubectl get nodes
+NAME STATUS ROLES AGE VERSION
+ip-10-0-25-239.us-west-2.compute.internal Ready <none> 10m <version number>
+ip-10-0-27-244.us-west-2.compute.internal Ready <none> 10m <version number>
+ip-10-0-35-29.us-west-2.compute.internal Ready <none> 10m <version number>
+```
+
+== Best practices for using Amazon EKS
+
+=== Use AWS CloudFormation for ongoing management
+
+We recommend using AWS CloudFormation to manage updating and deleting the resources that are created by this Quick Start.
+Using the Amazon EC2 console, CLI, or API to change or delete created by this Quick Start can cause future AWS
+CloudFormation operations on the stack to behave unexpectedly.
+
+=== Monitor additional resource usage
+
+This deployment enables users of the Amazon EKS cluster to be able to create ELB load balancers and Amazon EBS volumes
+as part of their Kubernetes applications. As these carry additional costs, we recommend that you grant users of the
+Amazon EKS cluster only the permissions they require via https://kubernetes.io/docs/reference/access-authn-authz/rbac/[Kubernetes Role Based Access Control (RBAC)]
+and that you monitor the resource usage by using the Kubernetes CLI or the Kubernetes API to describe the persistent
+volume claims (PVC) and LoadBalancer resources across all namespaces. To disable this functionality, you can update the
+ControlPlaneRole IAM role created in the IAM child stack to deny the Kubernetes control plane access to specific AWS
+APIs like ec2:CreateVolume or elb:CreateLoadBalancer.
+
+== Security
+
+Amazon EKS uses IAM to provide authentication to your Kubernetes cluster (through the AWS IAM Authenticator for
+Kubernetes), but it still relies on native Kubernetes RBAC for authorization. This means that IAM is used only for
+authentication of valid IAM entities. All permissions for interacting with your Amazon EKS cluster’s Kubernetes API are
+managed through the native Kubernetes RBAC system. We recommend that you grant least-privilege access via Kubernetes RBAC.
+
+== Adding Kubernetes users
+
+This Quick Start creates an IAM role that is used to create the Kubernetes control plane. The AWS CloudFormation custom
+resources and the Linux bastion host use the IAM role to provide access to the Kubernetes API. Additional IAM users or
+roles can be added as Kubernetes admin users (**system:master** kubernetes cluster role) by entering an ARN into the
+**Additional EKS admin ARN** parameter when you launch this Quick Start. To add users after the stack has launched, follow the steps in the https://docs.aws.amazon.com/eks/latest/userguide/add-user-role.html[Amazon EKS documentation].
+
+== Managing Kubernetes resources using AWS CloudFormation
+
+This Quick Start includes CloudFormation registry resource types to enable authoring, creating, and
+managing Kubernetes-based applications using AWS CloudFormation. For example usage, see the
+https://github.com/aws-quickstart/quickstart-aws-eks/blob/master/templates/example-workload.template.yaml[example-workload template].
+
+== Optional add-ins
+
+This Quick Start contains optional configurations and add-ins for Kubernetes that enhance the functionality and reduce
+the post-deployment configuration tasks for customers who require these add-ins.
+
+=== Cluster autoscaler
+
+https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler[Cluster autoscaler] automatically adjusts the
+size of the Kubernetes cluster when there are insufficient resources or nodes that have been underutilized for an
+extended period of time.
+
+=== Managed node group
+
+With Amazon EKS–managed node groups, the provisioning and lifecycle management of the nodes is automated. All nodes get
+provisioned as part of an Auto Scaling group, which means you cannot use the “Cluster autoscaler” option of the
+QuickStart. Nodes are created using the latest Amazon EKS–optimized Amazon Linux 2 AMI.
+
+=== EFS StorageClass
+
+An optional EFSStorageClass volume provides redundant persistent storage that is not tied to an individual Availability
+Zone and is well suited for highly available stateful applications that are required to survive an Availability Zone
+outage. The Amazon EFS volume is made available to Kubernetes pods by the
+https://github.com/helm/charts/tree/master/stable/efs-provisioner[EFS provisioner project].
+
+There are several configuration options available to tune the performance and throughput of the underlying EFS volume.
+For details, see the https://docs.aws.amazon.com/efs/latest/ug/performance.html[Amazon EFS documentation].

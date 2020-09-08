@@ -1,6 +1,9 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: Deploys an EKS cluster into an existing VPC (qs-1p7nknoht)
 Metadata:
+  QuickStartDocumentation:
+    EntrypointName: "Launch into an existing VPC"
+    Order: Index b
   LintSpellExclude:
     - Resource Name
     - Kubernetes
@@ -18,12 +21,19 @@ Metadata:
     - Enabled
     - Disabled
     - Snyk
-    - 'No '
+    - '"No"'
     - Windows
+    - Grafana
+    - Prometheus
+    - namespaces
+    - namespace
+    - Fargate
+    - '"Config '
+    - '(Optional)'
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
-          default: Network configuration
+          default: Basic configuration
         Parameters:
           - VPCID
           - PrivateSubnet1ID
@@ -33,34 +43,36 @@ Metadata:
           - PublicSubnet2ID
           - PublicSubnet3ID
           - RemoteAccessCIDR
+          - KeyPairName
+          - ConfigSetName
+          - PerAccountSharedResources
+          - PerRegionSharedResources
+      - Label:
+          default: Network configuration
+        Parameters:
           - HttpProxy
       - Label:
           default: Amazon EC2 configuration
         Parameters:
-          - KeyPairName
           - ProvisionBastionHost
       - Label:
           default: Amazon EKS configuration
         Parameters:
           - EKSClusterName
-          - NodeInstanceType
-          - NumberOfNodes
           - EKSPublicAccessEndpoint
-          - ManagedNodeGroup
           - AdditionalEKSAdminUserArn
           - AdditionalEKSAdminRoleArn
+          - FargateNamespaces
+          - FargateLabels
       - Label:
-          default: Snyk monitor [APN security partner]
+          default: Default EKS node group configuration
         Parameters:
-          - SnykIntegrationId
-          - SnykIntegration
+          - ManagedNodeGroup
+          - NodeInstanceType
+          - NumberOfNodes
+          - MaxNumberOfNodes
       - Label:
-          default: New Relic infrastructure [APN monitoring partner]
-        Parameters:
-          - NewRelicIntegration
-          - NewRelicLicenseKey
-      - Label:
-          default: Optional Amazon EKS Windows configuration
+          default: Amazon EKS Windows configuration
         Parameters:
           - WindowsSupport
           - WindowsNodeInstanceType
@@ -68,20 +80,28 @@ Metadata:
           - WindowsNodeGroupName
           - WindowsNodeVolumeSize
       - Label:
-          default: AWS Quick Start configuration
+          default: Snyk monitor [APN security partner]
         Parameters:
-          - PerAccountSharedResources
-          - PerRegionSharedResources
-          - ConfigSetName
-          - QSS3BucketName
-          - QSS3KeyPrefix
-          - QSS3BucketRegion
+          - SnykIntegration
+          - SnykIntegrationId
       - Label:
-          default: Optional Kubernetes add-ins
+          default: New Relic infrastructure [APN monitoring partner]
+        Parameters:
+          - NewRelicIntegration
+          - NewRelicLicenseKey
+      - Label:
+          default: Kubernetes add-ins
         Parameters:
           - ALBIngressController
           - ClusterAutoScaler
           - EfsStorageClass
+          - MonitoringStack
+      - Label:
+          default: AWS Quick Start configuration
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
+          - QSS3BucketRegion
     ParameterLabels:
       KeyPairName:
         default: SSH key name
@@ -94,7 +114,7 @@ Metadata:
       RemoteAccessCIDR:
         default: Allowed external access CIDR
       NodeInstanceType:
-        default: Nodes instance type
+        default: Instance type
       NumberOfNodes:
         default: Number of nodes
       ManagedNodeGroup:
@@ -138,13 +158,13 @@ Metadata:
       EKSClusterName:
         default: EKS cluster name
       SnykIntegrationId:
-        default: Snyk integration ID
+        default: Integration ID
       SnykIntegration:
         default: Snyk integration
       NewRelicIntegration:
         default: New Relic integration
       NewRelicLicenseKey:
-        default: New Relic license key
+        default: License key
       EKSPublicAccessEndpoint:
         default: EKS public access endpoint
       HttpProxy:
@@ -155,10 +175,18 @@ Metadata:
         default: Per account shared resources
       PerRegionSharedResources:
         default: Per region shared resources
+      MonitoringStack:
+        default: Monitoring stack
+      MaxNumberOfNodes:
+        default: Maximum number of nodes
+      FargateNamespaces:
+        default: Fargate namespaces
+      FargateLabels:
+        default: Fargate labels
 Parameters:
   KeyPairName:
     Description: The name of an existing public/private key pair, which allows you
-      to securely connect to your instance after it launches
+      to securely connect to your instance after it launches.
     Type: AWS::EC2::KeyPair::KeyName
   QSS3BucketName:
     AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
@@ -181,7 +209,7 @@ Parameters:
     Type: String
   QSS3BucketRegion:
     Default: 'us-east-1'
-    Description: The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is
+    Description: The Region where the Quick Start S3 bucket (QSS3BucketName) is
       hosted. When using your own bucket, you must specify this value.
     Type: String
   RemoteAccessCIDR:
@@ -196,11 +224,11 @@ Parameters:
     Description: Configure access to the Kubernetes API server endpoint from outside of your VPC.
   AdditionalEKSAdminUserArn:
     Default: ""
-    Description: "[OPTIONAL] IAM user Amazon Resource Name (ARN) to be granted admin access to the EKS cluster"
+    Description: "(Optional) IAM user Amazon Resource Name (ARN) to be granted admin access to the EKS cluster."
     Type: String
   AdditionalEKSAdminRoleArn:
     Default: ""
-    Description: "[OPTIONAL] IAM role Amazon Resource Name (ARN) to be granted admin access to the EKS cluster"
+    Description: "(Optional) IAM role Amazon Resource Name (ARN) to be granted admin access to the EKS cluster."
     Type: String
   NodeInstanceType:
     Default: t3.medium
@@ -210,8 +238,8 @@ Parameters:
                     p3.8xlarge, p3.16xlarge, r5.large, r5.xlarge, r5.2xlarge, r5.4xlarge, r5.12xlarge, r5.24xlarge, r5d.large, 
                     r5d.xlarge, r5d.2xlarge, r5d.4xlarge, r5d.12xlarge, r5d.24xlarge, z1d.large, z1d.xlarge, z1d.2xlarge. 
                     z1d.3xlarge, z1d.6xlarge, z1d.12xlarge]
-    ConstraintDescription: Must be a valid EC2 instance type
-    Description: The type of EC2 instance for the node instances.
+    ConstraintDescription: Must be a valid EC2 instance type.
+    Description: EC2 instance type.
     Type: String
   NumberOfNodes:
     Default: 3
@@ -219,59 +247,59 @@ Parameters:
     Type: Number
   ManagedNodeGroup:
     AllowedValues: [ "yes", "no" ]
-    Default: "no"
-    Description: Choose if you want to use a managed node group. If you select "yes", you must select Kubernetes version 1.14 or higher.
+    Default: "yes"
+    Description: Choose "no" if you want to create the default node group as unmanaged.
     Type: String
   VPCID:
     Type: "AWS::EC2::VPC::Id"
-    Description: The ID of your existing VPC (e.g., vpc-0343606e)
+    Description: The ID of your existing VPC (e.g., vpc-0343606e).
   PublicSubnet1ID:
     Type: String
-    Description: The ID of the public subnet in Availability Zone 1 in your existing VPC (e.g., subnet-a0246dcd)
+    Description: The ID of the public subnet in Availability Zone 1 in your existing VPC (e.g., subnet-a0246dcd).
     Default: ""
   PublicSubnet2ID:
     Type: String
-    Description: The ID of the public subnet in Availability Zone 2 in your existing VPC (e.g., subnet-b1236eea)
+    Description: The ID of the public subnet in Availability Zone 2 in your existing VPC (e.g., subnet-b1236eea).
     Default: ""
   PublicSubnet3ID:
     Type: String
-    Description: The ID of the public subnet in Availability Zone 3 in your existing VPC (e.g., subnet-c3456aba)
+    Description: The ID of the public subnet in Availability Zone 3 in your existing VPC (e.g., subnet-c3456aba).
     Default: ""
   PrivateSubnet1ID:
     Type: "AWS::EC2::Subnet::Id"
-    Description: The ID of the private subnet in Availability Zone 1 in your existing VPC (e.g., subnet-fe9a8b32)
+    Description: The ID of the private subnet in Availability Zone 1 in your existing VPC (e.g., subnet-fe9a8b32).
   PrivateSubnet2ID:
     Type: String
-    Description: The ID of the private subnet in Availability Zone 2 in your existing VPC (e.g., subnet-be8b01ea)
+    Description: The ID of the private subnet in Availability Zone 2 in your existing VPC (e.g., subnet-be8b01ea).
     Default: ""
   PrivateSubnet3ID:
     Type: String
-    Description: The ID of the private subnet in Availability Zone 3 in your existing VPC (e.g., subnet-abd39039)
+    Description: The ID of the private subnet in Availability Zone 3 in your existing VPC (e.g., subnet-abd39039).
     Default: ""
   ClusterAutoScaler:
     Type: String
     AllowedValues: [ Enabled, Disabled ]
     Default: Disabled
-    Description: Choose Enabled to enable Kubernetes cluster autoscaler.
+    Description: Choose "Enabled" to enable Kubernetes cluster autoscaler.
   EfsStorageClass:
     Type: String
     AllowedValues: [ Enabled, Disabled ]
     Default: Disabled
-    Description: Choose Enabled to enable EFS storage class, which will create the required EFS volume.
+    Description: Choose "Enabled" to enable EFS storage class.
   HttpProxy:
     Type: String
     Default: ""
-    Description: "HTTP(S) proxy configuration, if provided all worker nodes and pod egress traffic will go use this proxy. Example: http://10.101.0.100:3128/"
+    Description: "(Optional) HTTP(S) proxy configuration, if provided all worker nodes and pod egress traffic will use this proxy. Example: http://10.101.0.100:3128/."
   ProvisionBastionHost:
     Type: String
     AllowedValues: [ "Enabled", "Disabled" ]
     Default: "Enabled"
-    Description: "Skip creating a bastion host by setting this is set to Disabled."
+    Description: Skip creating a bastion host by choosing "Disabled."
   WindowsSupport:
     Type: String
     AllowedValues: [ "Enabled", "Disabled" ]
     Default: "Disabled"
-    Description: "Choose Enabled to create a Windows Nodegroup."
+    Description: Choose "Enabled" to create a Windows node group.
   WindowsNodeInstanceType:
     Default: t3.large
     AllowedValues: [t3.nano,t3.micro, t3.small, t3.medium, t3.large, t3.xlarge, t3.2xlarge, m5.large, m5.xlarge, m5.2xlarge
@@ -281,7 +309,7 @@ Parameters:
                     r5d.xlarge, r5d.2xlarge, r5d.4xlarge, r5d.12xlarge, r5d.24xlarge, z1d.large, z1d.xlarge, z1d.2xlarge. 
                     z1d.3xlarge, z1d.6xlarge, z1d.12xlarge]
     ConstraintDescription: Must be a valid EC2 instance type
-    Description: The type of EC2 instance for the node instances.
+    Description: EC2 instance type.
     Type: String
   WindowsNumberOfNodes:
     Default: 3
@@ -299,56 +327,79 @@ Parameters:
     Type: String
     AllowedValues: [ "Enabled", "Disabled" ]
     Default: "Disabled"
-    Description: "Set this to Enabled to deploy the ALB ingress controller."
+    Description: Choose "Enabled" to deploy the ALB ingress controller.
   EKSClusterName:
     Type: String
     Default: ""
-    Description: "[OPTIONAL] Name for the EKS cluster, if left blank one will be auto-generated. Must be unique within the AWS Region."
+    Description: "(Optional) Name for the EKS cluster. If left blank one will be auto-generated. Must be unique within the Region."
   SnykIntegrationId:
     Type: String
     AllowedPattern: '^[a-z0-9-]{36}$|^$'
     Default: ""
-    Description: '[Optional] Snyk Kubernetes integration ID. If Snyk is enabled, this must be provided. For more information see https://support.snyk.io/hc/en-us/articles/360003916158-Install-the-Snyk-controller-with-Helm .'
+    Description: 'If Snyk is enabled, this must be provided. For more information see https://support.snyk.io/hc/en-us/articles/360003916158-Install-the-Snyk-controller-with-Helm .'
   SnykIntegration:
     Type: String
     AllowedValues: [Enabled, Disabled]
     Default: Disabled
-    Description: "Snyk security monitor integration. For more information see https://github.com/aws-quickstart/quickstart-eks-snyk/ ."
+    Description: "For more information see https://github.com/aws-quickstart/quickstart-eks-snyk/ ."
   NewRelicLicenseKey:
     Type: String
     Default: ""
     NoEcho: true
-    Description: '[Optional] New Relic infrastructure license key. If New Relic is enabled, this must be provided. For more information see https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/license-key .'
+    Description: 'If New Relic is enabled, this must be provided. For more information see https://docs.newrelic.com/docs/accounts/install-new-relic/account-setup/license-key .'
   NewRelicIntegration:
     Type: String
     AllowedValues: [Enabled, Disabled]
     Default: Disabled
-    Description: "New Relic infrastructure monitoring integration. For more information see https://github.com/aws-quickstart/quickstart-eks-newrelic-infrastructure/ ."
+    Description: "For more information see https://github.com/aws-quickstart/quickstart-eks-newrelic-infrastructure/ ."
   ConfigSetName:
     Type: String
     Default: ""
-    Description: Name for the config set, if you have launched the advanced configuration stack, this name must match the ConfigSetName parameter in that stack for the configuration to be applied.
+    Description: >-
+      (Optional) This name is used to map advanced parameters to an EKS cluster. If you have launched an advanced
+      configuration stack and would like to apply it's values to this cluster, this name must match the "Config set name"
+      parameter in that stack. If left blank a new config set will be created using default values.
   PerAccountSharedResources:
     Type: String
     AllowedValues: ['Yes', 'No']
     Default: 'Yes'
-    Description: Choose No if you have already deployed another EKS Quick Start stack in this AWS account.
+    Description: Choose "No" if you have already deployed another EKS Quick Start stack in this AWS account.
   PerRegionSharedResources:
     Type: String
     AllowedValues: ['Yes', 'No']
     Default: 'Yes'
-    Description: Choose No if you have already deployed another EKS Quick Start stack in this region.
+    Description: Choose "No" if you have already deployed another EKS Quick Start stack in this Region.
+  MonitoringStack:
+    Type: String
+    AllowedValues: [ "Prometheus + Grafana", "None" ]
+    Default: "None"
+    Description: Enable monitoring stack with "Prometheus+Grafana."
+  MaxNumberOfNodes:
+    Default: 3
+    Description: The maximum number of Amazon EKS node instances. The default is three nodes.
+    Type: Number
+  FargateNamespaces:
+    Type: String
+    Default: ""
+    Description: "(Optional) Comma separated list of namespaces that Fargate should be enabled for."
+  FargateLabels:
+    Type: String
+    Default: ""
+    Description: >-
+      Requires at least one Fargate namespace to be specified. Comma separated list of key=value pod labels.
+      For a pod to be run on Fargate, all labels must match and it must be running in a namespace defined in
+      "Fargate namespaces".
 Mappings:
   Config:
     Prefix: { Value: 'eks-quickstart' }
 Rules:
-  ClusterAutoScalerVerification:
-    RuleCondition: !Equals [ !Ref 'ManagedNodeGroup', 'yes' ]
+  LablesNeedNamespaces:
+    RuleCondition: !Not
+      - !Equals [ !Ref FargateLabels, "" ]
     Assertions:
-      - AssertDescription: To use Cluster AutoScaler you should not use Managed Node Groups
-        Assert: !Contains
-          - - 'Disabled'
-          - !Ref 'ClusterAutoScaler'
+      - AssertDescription: You must specify at least one Fargate namespace in order to enable fargate.
+        Assert: !Not
+          - !Equals [ !Ref FargateNamespaces, "" ]
 Conditions:
   UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
   CreateAdvancedConfigWithDefaults: !Equals [!Ref ConfigSetName, '']
@@ -419,7 +470,7 @@ Resources:
         PrivateSubnet2ID: !Ref PrivateSubnet2ID
         PrivateSubnet3ID: !Ref PrivateSubnet3ID
         NumberOfNodes: !Ref NumberOfNodes
-        MaxNumberOfNodes: !Ref NumberOfNodes
+        MaxNumberOfNodes: !Ref MaxNumberOfNodes
         ManagedNodeGroup: !Ref ManagedNodeGroup
         NodeInstanceType: !Ref NodeInstanceType
         RemoteAccessCIDR: !Ref RemoteAccessCIDR
@@ -442,6 +493,9 @@ Resources:
         WindowsNumberOfNodes: !Ref WindowsNumberOfNodes
         WindowsNodeGroupName: !Ref WindowsNodeGroupName
         WindowsNodeVolumeSize: !Ref WindowsNodeVolumeSize
+        ProvisionMonitoringStack: !Ref MonitoringStack
+        FargateLabels: !Ref FargateLabels
+        FargateNamespaces: !Ref FargateNamespaces
 Outputs:
   EKSClusterName:
     Value: !GetAtt EKSStack.Outputs.EKSClusterName
@@ -451,11 +505,3 @@ Outputs:
     Value: !GetAtt EKSStack.Outputs.BastionSecurityGroup
   NodeGroupSecurityGroup:
     Value: !GetAtt EKSStack.Outputs.NodeGroupSecurityGroup
-  NodeInstanceProfile:
-    Value: !GetAtt EKSStack.Outputs.NodeInstanceProfile
-  NodeInstanceRoleName:
-    Value: !GetAtt EKSStack.Outputs.NodeInstanceRoleName
-  NodeInstanceRoleArn:
-    Value: !GetAtt EKSStack.Outputs.NodeInstanceRoleArn
-  ControlPlaneSecurityGroup:
-    Value: !GetAtt EKSStack.Outputs.ControlPlaneSecurityGroup

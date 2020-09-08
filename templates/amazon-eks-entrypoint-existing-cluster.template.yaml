@@ -1,7 +1,10 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: "Prepare an existing EKS cluster (qs-1p817r5f9)"
 Metadata:
-  LintSpellExclude: ['http://10.101.0.100:3128/', Security Group, Subnet IDs, 'No', vpc]
+  QuickStartDocumentation:
+    EntrypointName: "Prepare an existing EKS cluster"
+    Order: Index c
+  LintSpellExclude: ['http://10.101.0.100:3128/', Security Group, Subnet IDs, 'No', vpc, '(Optional)']
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
@@ -14,6 +17,9 @@ Metadata:
           - ControlPlaneSecurityGroup
           - PerAccountSharedResources
           - PerRegionSharedResources
+      - Label:
+          default: AWS Quick Start configuration
+        Parameters:
           - QSS3BucketName
           - QSS3KeyPrefix
           - QSS3BucketRegion
@@ -44,12 +50,12 @@ Parameters:
     Description: Name of the EKS cluster to be enabled for CloudFormation use.
   K8sSubnetIds:
     Type: String
-    Description: '[Optional] comma separated list of Subnet IDs associated with the EKS cluster. Must have routes to the Kubernetes, CloudFormation and EKS endpoints. Leave blank for publicly accessible clusters.'
+    Description: '(Optional) Comma separated list of Subnet IDs associated with the EKS cluster. Must have routes to the Kubernetes, CloudFormation and EKS endpoints. Leave blank for publicly accessible clusters.'
     Default: ""
   ControlPlaneSecurityGroup:
     Type: String
     Default: ""
-    Description: '[Optional] Security Group ID attached to the EKS cluster. Must have allow outbound access to the Kubernetes, CloudFormation and EKS endpoints. Leave blank for publicly accessible clusters.'
+    Description: '(Optional) Security Group ID attached to the EKS cluster. Must allow egress traffic to the Kubernetes, CloudFormation and EKS endpoints. Leave blank for publicly accessible clusters.'
   PerAccountSharedResources:
     Type: String
     AllowedValues: ['Yes', 'No']
@@ -84,13 +90,13 @@ Parameters:
     Type: String
   QSS3BucketRegion:
     Default: 'us-east-1'
-    Description: The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is
+    Description: The Region where the Quick Start S3 bucket (QSS3BucketName) is
       hosted. When using your own bucket, you must specify this value.
     Type: String
   HttpProxy:
     Type: String
     Default: ""
-    Description: "HTTP(S) proxy configuration, if provided all worker nodes and pod egress traffic will go use this proxy. Example: http://10.101.0.100:3128/"
+    Description: "(Optional) HTTP(S) proxy configuration, if provided all worker nodes and pod egress traffic will use this proxy. Example: http://10.101.0.100:3128/."
 Conditions:
   CreatePerAccountSharedResources: !Equals [!Ref PerAccountSharedResources, 'Yes']
   CreatePerRegionSharedResources: !Equals [!Ref PerRegionSharedResources, 'Yes']
@@ -102,6 +108,16 @@ Mappings:
       Bucket: 'aws-quickstart'
       Key: 'quickstart-amazon-eks/functions/packages/'
 Resources:
+  CloudFormationKubernetesVPCRoleExists:
+    Metadata:
+      DependsOn:
+        - !If [CreatePerRegionSharedResources, !Ref RegionalSharedResources, !Ref 'AWS::NoValue']
+        - !If [CreatePerAccountSharedResources, !Ref AccountSharedResources, !Ref 'AWS::NoValue']
+    Type: Custom::CliQuery
+    Properties:
+      ServiceToken: !Sub ['arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${Prefix}-ResourceReader', {Prefix: !FindInMap [Config, Prefix, Value]}]
+      AwsCliCommand: "iam list-roles --query 'Roles[?RoleName==`CloudFormation-Kubernetes-VPC`].RoleName | {RoleName: [0]}'"
+      IdField: 'RoleName'
   AccountSharedResources:
     Type: AWS::CloudFormation::Stack
     Condition: CreatePerAccountSharedResources
@@ -142,6 +158,7 @@ Resources:
         CreateBastionRole: "Disabled"
         BastionIAMRoleName: ""
         CreateWindowsRole: "Disabled"
+        CloudFormationKubernetesVPCRoleExists: !Ref CloudFormationKubernetesVPCRoleExists
   FunctionStack:
     Type: "AWS::CloudFormation::Stack"
     Properties:

@@ -9,6 +9,7 @@ project:
     QSS3BucketName: $[taskcat_autobucket]
     QSS3BucketRegion: $[taskcat_current_region]
     ProvisionBastionHost: Enabled
+    ManagedNodeGroup: 'no'
   lambda_source_path: functions/source
   lambda_zip_path: functions/packages
 tests:
