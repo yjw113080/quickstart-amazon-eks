@@ -419,10 +419,11 @@ users:
   user:
     exec:
       apiVersion: client.authentication.k8s.io/v1alpha1
-      command: aws-iam-authenticator
+      command: aws
       args:
-        - "token"
-        - "-i"
+        - "eks"
+        - "get-token"
+        - "--cluster-name"
         - "${K8S_CLUSTER_NAME}"
 EOF
     cp -r /home/${user}/.kube/ /root/.kube/
@@ -431,9 +432,6 @@ EOF
 
 function install_kubernetes_client_tools() {
     mkdir -p /usr/local/bin/
-    retry_command 20 curl --retry 5 -o aws-iam-authenticator https://amazon-eks.s3-us-west-2.amazonaws.com/1.16.8/2020-04-16/bin/linux/amd64/aws-iam-authenticator
-    chmod +x ./aws-iam-authenticator
-    mv ./aws-iam-authenticator /usr/local/bin/
     retry_command 20 curl --retry 5 -o kubectl https://amazon-eks.s3-us-west-2.amazonaws.com/1.16.8/2020-04-16/bin/linux/amd64/kubectl
     chmod +x ./kubectl
     mv ./kubectl /usr/local/bin/
