@@ -5,16 +5,16 @@
 
 *Q.* I encountered a *CREATE_FAILED* error when I launched the Quick Start.
 
-*A.* If AWS CloudFormation fails to create the stack, we recommend that you relaunch the template with *Rollback on failure* set to *No*. (This setting is under *Advanced* in the AWS CloudFormation console, *Options* page.) With this setting, the stack’s state will be retained and the instances will be left running, so you can troubleshoot the issue.
+*A.* If AWS CloudFormation fails to create the stack, we recommend that you relaunch the template with *Rollback on failure* set to *Disabled*. (This setting is under *Advanced* in the AWS CloudFormation console, *Options* page.) With this setting, the stack’s state is retained, and instances remain running so you can troubleshoot the issue.
 
-*Important:* When you set *Rollback on failure* to *No*, you will continue to incur AWS charges for this stack. Please make sure to delete the stack when you finish troubleshooting.
+IMPORTANT: When you set *Rollback on failure* to *Disabled*, you continue to incur AWS charges for the stack. Ensure that you delete the stack when you finish troubleshooting.
 
-For additional information, see https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/troubleshooting.html[Troubleshooting AWS CloudFormation] on the AWS website.
+For more information, see https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/troubleshooting.html[Troubleshooting AWS CloudFormation].
 
-*Q.* A resource type starting with **AWSQS::** failed on stack create, update, or deletion.
+*Q.* A resource type starting with *AWSQS::* failed on stack create, update, or deletion.
 
-*A.* These resources are CloudFormation registry resource types created by the Quick Start. Their logs are stored in Amazon CloudWatch Logs with the log group prefix of **/cloudformation/registry/awsqs-**.
+*A.* These resources are AWS CloudFormation registry resource types created by the Quick Start. Logs for it are stored in Amazon CloudWatch Logs with a group prefix of */cloudformation/registry/awsqs-*.
 
 *Q.* I encountered a size limitation error when I deployed the AWS CloudFormation templates.
 
-*A.* We recommend that you launch the Quick Start templates from the links in this guide or from another S3 bucket. If you deploy the templates from a local copy on your computer or from a non-S3 location, you might encounter template size limitations when you create the stack. For more information about AWS CloudFormation limits, see the http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cloudformation-limits.html[AWS documentation].
+*A.* We recommend that you launch the Quick Start templates from the links in this guide or from another S3 bucket. If you deploy the templates from a local copy on your computer or from a non-Amazon S3 location, you might encounter template size limitations when you create the stack. For more information, see http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cloudformation-limits.html[AWS CloudFormation quotas].
