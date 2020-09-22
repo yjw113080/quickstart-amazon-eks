@@ -442,7 +442,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       MemorySize: 512
-      FunctionName: !Sub ['arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${Prefix}-ResourceReader', {Prefix: !FindInMap [Config, Prefix, Value]}]
+      FunctionName: !Sub ['${Prefix}-ResourceReader', {Prefix: !FindInMap [Config, Prefix, Value]}]
       Description: Performs an AWS CLI command and returns the json result. Used to get the state of existing resources.
       Handler: lambda.handler
       Runtime: python3.7
