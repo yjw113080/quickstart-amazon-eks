@@ -108,6 +108,7 @@ tests:
       EKSPublicAccessEndpoint: Enabled
       NodeGroupOS: Bottlerocket
       NodeInstanceFamily: ARM
+      NodeInstanceType: c6g.medium
   snyk:
     regions:
       - eu-west-3
