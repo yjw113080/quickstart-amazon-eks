@@ -1,6 +1,10 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Description: Deploys an EKS cluster in a new VPC (qs-1p7nknoht)
 Metadata:
+  AutoInstance:
+    NodeInstanceType:
+      InstanceFilters:
+      - [['PV'], "!=", "SupportedVirtualizationTypes"]
   QuickStartDocumentation:
     EntrypointName: "Launch into a new VPC"
     Order: Index a
@@ -28,6 +32,8 @@ Metadata:
     - Windows
     - '"Config '
     - '(Optional)'
+    - Unmanaged
+    - Node
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
@@ -66,18 +72,12 @@ Metadata:
       - Label:
           default: Default EKS node group configuration
         Parameters:
-          - ManagedNodeGroup
           - NodeInstanceType
           - NumberOfNodes
           - MaxNumberOfNodes
-      - Label:
-          default: Amazon EKS Windows configuration
-        Parameters:
-          - WindowsSupport
-          - WindowsNodeInstanceType
-          - WindowsNumberOfNodes
-          - WindowsNodeGroupName
-          - WindowsNodeVolumeSize
+          - NodeGroupOS
+          - NodeGroupType
+          - NodeInstanceFamily
       - Label:
           default: Snyk monitor [APN security partner]
         Parameters:
@@ -135,18 +135,6 @@ Metadata:
         default: Number of nodes
       MaxNumberOfNodes:
         default: Maximum number of nodes
-      ManagedNodeGroup:
-        default: Managed node group
-      WindowsSupport:
-        default: Allow for creation of Windows node group
-      WindowsNodeInstanceType:
-        default: Windows node instance type
-      WindowsNumberOfNodes:
-        default: Number of Windows nodes
-      WindowsNodeGroupName:
-        default: Windows node group name
-      WindowsNodeVolumeSize:
-        default: Windows node volume size
       AdditionalEKSAdminUserArn:
         default: Additional EKS admin ARN (IAM user)
       AdditionalEKSAdminRoleArn:
@@ -187,6 +175,12 @@ Metadata:
         default: Config set name
       TestSuite:
         default: Test suite
+      NodeGroupType:
+        default: Node group type
+      NodeInstanceFamily:
+        default: Node instance family
+      NodeGroupOS:
+        default: Node group OS
 Parameters:
   AvailabilityZones:
     Description: The list of Availability Zones to use for the subnets in the VPC. Three
@@ -287,12 +281,7 @@ Parameters:
     Type: String
   NodeInstanceType:
     Default: t3.medium
-    AllowedValues: [t3.nano,t3.micro, t3.small, t3.medium, t3.large, t3.xlarge, t3.2xlarge, m5.large, m5.xlarge, m5.2xlarge
-                    m5.4xlarge, m5.12xlarge, m5.24xlarge, c5.large, c5.xlarge, c5.2xlarge, c5.4xlarge, c5.9xlarge, c5.18xlarge,
-                    i3.large, i3.xlarge, i3.2xlarge, i3.4xlarge, i3.8xlarge, i3.16xlarge, x1.16xlarge, x1.32xlarge, p3.2xlarge,
-                    p3.8xlarge, p3.16xlarge, r5.large, r5.xlarge, r5.2xlarge, r5.4xlarge, r5.12xlarge, r5.24xlarge, r5d.large, 
-                    r5d.xlarge, r5d.2xlarge, r5d.4xlarge, r5d.12xlarge, r5d.24xlarge, z1d.large, z1d.xlarge, z1d.2xlarge. 
-                    z1d.3xlarge, z1d.6xlarge, z1d.12xlarge]
+    AllowedValues: ["t3a.nano", "t3.nano", "t2.nano", "t3a.micro", "t3.micro", "t2.micro", "t3a.small", "t3.small", "t2.small", "t3a.medium", "t3.medium", "t2.medium", "t3a.large", "c5a.large", "t3.large", "c5.large", "m5a.large", "c5ad.large", "t2.large", "c5d.large", "m5.large", "c4.large", "m4.large", "m5ad.large", "c5n.large", "r5a.large", "m5d.large", "m5n.large", "r5.large", "r5ad.large", "r4.large", "m5dn.large", "r5d.large", "r5n.large", "t3a.xlarge", "c5a.xlarge", "i3.large", "t3.xlarge", "r5dn.large", "c5.xlarge", "c5ad.xlarge", "m5a.xlarge", "t2.xlarge", "z1d.large", "m5.xlarge", "c5d.xlarge", "c4.xlarge", "m4.xlarge", "m5ad.xlarge", "c5n.xlarge", "r5a.xlarge", "m5d.xlarge", "i3en.large", "m5n.xlarge", "r5.xlarge", "r5ad.xlarge", "r4.xlarge", "m5dn.xlarge", "r5d.xlarge", "r5n.xlarge", "t3a.2xlarge", "c5a.2xlarge", "i3.xlarge", "t3.2xlarge", "r5dn.xlarge", "c5.2xlarge", "m5a.2xlarge", "c5ad.2xlarge", "inf1.xlarge", "t2.2xlarge", "z1d.xlarge", "c5d.2xlarge", "m5.2xlarge", "c4.2xlarge", "m4.2xlarge", "m5ad.2xlarge", "c5n.2xlarge", "r5a.2xlarge", "m5d.2xlarge", "i3en.xlarge", "h1.2xlarge", "m5n.2xlarge", "r5.2xlarge", "r5ad.2xlarge", "g4dn.xlarge", "r4.2xlarge", "m5dn.2xlarge", "r5d.2xlarge", "inf1.2xlarge", "r5n.2xlarge", "c5a.4xlarge", "i3.2xlarge", "r5dn.2xlarge", "c5.4xlarge", "c5ad.4xlarge", "m5a.4xlarge", "d2.xlarge", "z1d.2xlarge", "g3s.xlarge", "g4dn.2xlarge", "c5d.4xlarge", "m5.4xlarge", "c4.4xlarge", "m4.4xlarge", "m5ad.4xlarge", "x1e.xlarge", "c5n.4xlarge", "p2.xlarge", "r5a.4xlarge", "i3en.2xlarge", "m5d.4xlarge", "h1.4xlarge", "m5n.4xlarge", "r5.4xlarge", "r5ad.4xlarge", "r4.4xlarge", "m5dn.4xlarge", "z1d.3xlarge", "g3.4xlarge", "r5d.4xlarge", "r5n.4xlarge", "g4dn.4xlarge", "c5a.8xlarge", "i3.4xlarge", "r5dn.4xlarge", "i3en.3xlarge", "m5a.8xlarge", "c5ad.8xlarge", "d2.2xlarge", "c5.9xlarge", "m5.8xlarge", "c4.8xlarge", "m5ad.8xlarge", "f1.2xlarge", "x1e.2xlarge", "c5d.9xlarge", "m5d.8xlarge", "r5a.8xlarge", "c5a.12xlarge", "h1.8xlarge", "inf1.6xlarge", "m5n.8xlarge", "c5n.9xlarge", "i3en.24xlarge", "i3en.metal", "p3.8xlarge", "f1.16xlarge", "x1.32xlarge", "x1e.16xlarge", "p2.16xlarge", "m4.10xlarge", "r5.8xlarge", "c5.12xlarge", "c5ad.12xlarge", "m5a.12xlarge", "r5ad.8xlarge", "r4.8xlarge", "m5dn.8xlarge", "g4dn.8xlarge", "z1d.6xlarge", "g3.8xlarge", "c5d.12xlarge", "m5.12xlarge", "r5d.8xlarge", "r5n.8xlarge", "c5a.16xlarge", "m5ad.12xlarge", "i3.8xlarge", "r5dn.8xlarge", "r5a.12xlarge", "m5d.12xlarge", "i3en.6xlarge", "m5a.16xlarge", "c5ad.16xlarge", "d2.4xlarge", "m5n.12xlarge", "p3.16xlarge", "x1e.32xlarge", "r5.12xlarge", "p3.2xlarge", "c5.18xlarge", "m5.16xlarge", "r5ad.12xlarge", "m4.16xlarge", "m5dn.12xlarge", "m5ad.16xlarge", "f1.4xlarge", "x1e.4xlarge", "c5d.18xlarge", "r5d.12xlarge", "r5n.12xlarge", "m5d.16xlarge", "r5a.16xlarge", "c5a.24xlarge", "h1.16xlarge", "m5n.16xlarge", "c5n.18xlarge", "c5n.metal", "g4dn.12xlarge", "p3dn.24xlarge", "r5dn.12xlarge", "r5.16xlarge", "c5.metal", "c5.24xlarge", "c5ad.24xlarge", "m5a.24xlarge", "r5ad.16xlarge", "r4.16xlarge", "m5dn.16xlarge", "g4dn.16xlarge", "z1d.metal", "z1d.12xlarge", "g3.16xlarge", "m5.metal", "m5.24xlarge", "r5d.16xlarge", "c5d.24xlarge", "c5d.metal", "r5n.16xlarge", "m5ad.24xlarge", "i3.metal", "i3.16xlarge", "r5dn.16xlarge", "i3en.12xlarge", "m5d.metal", "m5d.24xlarge", "r5a.24xlarge", "d2.8xlarge", "m5n.24xlarge", "r5.24xlarge", "r5.metal", "r5ad.24xlarge", "m5dn.24xlarge", "x1.16xlarge", "x1e.8xlarge", "r5d.24xlarge", "r5d.metal", "r5n.24xlarge", "p2.8xlarge", "inf1.24xlarge", "g4dn.metal", "r5dn.24xlarge"]
     ConstraintDescription: Must be a valid EC2 instance type
     Description: EC2 instance type.
     Type: String
@@ -304,11 +293,6 @@ Parameters:
     Default: 3
     Description: The maximum number of Amazon EKS node instances. The default is three nodes.
     Type: Number
-  ManagedNodeGroup:
-    AllowedValues: [ "yes", "no" ]
-    Default: "yes"
-    Description: Choose "no" if you want to create the default node group as unmanaged.
-    Type: String
   ClusterAutoScaler:
     Type: String
     AllowedValues: [ Enabled, Disabled ]
@@ -334,34 +318,6 @@ Parameters:
     AllowedValues: [ "Enabled", "Disabled" ]
     Default: "Enabled"
     Description: Skip creating a bastion host by choosing "Disabled."
-  WindowsSupport:
-    Type: String
-    AllowedValues: [ "Enabled", "Disabled" ]
-    Default: "Disabled"
-    Description: Choose "Enabled" to create a Windows node group.
-  WindowsNodeInstanceType:
-    Default: t3.large
-    AllowedValues: [t3.nano,t3.micro, t3.small, t3.medium, t3.large, t3.xlarge, t3.2xlarge, m5.large, m5.xlarge, m5.2xlarge
-                    m5.4xlarge, m5.12xlarge, m5.24xlarge, c5.large, c5.xlarge, c5.2xlarge, c5.4xlarge, c5.9xlarge, c5.18xlarge,
-                    i3.large, i3.xlarge, i3.2xlarge, i3.4xlarge, i3.8xlarge, i3.16xlarge, x1.16xlarge, x1.32xlarge, p3.2xlarge,
-                    p3.8xlarge, p3.16xlarge, r5.large, r5.xlarge, r5.2xlarge, r5.4xlarge, r5.12xlarge, r5.24xlarge, r5d.large, 
-                    r5d.xlarge, r5d.2xlarge, r5d.4xlarge, r5d.12xlarge, r5d.24xlarge, z1d.large, z1d.xlarge, z1d.2xlarge. 
-                    z1d.3xlarge, z1d.6xlarge, z1d.12xlarge]
-    ConstraintDescription: Must be a valid EC2 instance type
-    Description: EC2 instance type.
-    Type: String
-  WindowsNumberOfNodes:
-    Default: 3
-    Description: The number of Amazon EKS Windows node instances. The default is one for each of the three Availability Zones.
-    Type: Number
-  WindowsNodeGroupName:
-    Default: Default-Windows
-    Description: The name for EKS Windows node group.
-    Type: String
-  WindowsNodeVolumeSize:
-    Default: 50
-    Description: The size for the Windows node's root EBS volumes (should be at least 50 gb).
-    Type: String
   ALBIngressController:
     Type: String
     AllowedValues: [ "Enabled", "Disabled" ]
@@ -424,14 +380,24 @@ Parameters:
     AllowedValues: [Enabled, Disabled]
     Default: Disabled
     Description: Deploys a test stack that tests components of the Quick Start.
-Rules:
-  LablesNeedNamespaces:
-    RuleCondition: !Not
-      - !Equals [ !Ref FargateLabels, "" ]
-    Assertions:
-      - AssertDescription: You must specify at least one Fargate namespace in order to enable fargate.
-        Assert: !Not
-          - !Equals [ !Ref FargateNamespaces, "" ]
+  NodeInstanceFamily:
+    AllowedValues: ['Standard', 'ARM', 'GPU']
+    Type: String
+    Description: Choose the instance family to match the value of "Node instance type."
+  NodeGroupType:
+    Type: String
+    AllowedValues: [ Managed, Unmanaged ]
+    Default: Managed
+    Description: Choose "Unmanaged" to create an auto-scaling group without using the EKS managed node groups feature.
+  NodeGroupOS:
+    AllowedValues:
+      - 'Amazon Linux 2'
+      - 'Bottlerocket'
+      - 'Windows'
+    Default: 'Amazon Linux 2'
+    Description: The operating system to be used for the node instances. Note that if you choose "Windows" an additional
+      Amazon Linux node group is also created.
+    Type: String
 Conditions:
   CreateAdvancedConfigWithDefaults: !Equals [!Ref ConfigSetName, '']
   CreatePerAccountSharedResources: !Equals [!Ref PerAccountSharedResources, 'Yes']
@@ -441,6 +407,7 @@ Conditions:
     - !Equals [!Ref NumberOfAZs, "2"]
     - !Equals [!Ref NumberOfAZs, "3"]
   UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
+  WindowsNodes: !Equals [NodeGroupOS, 'Windows']
 Mappings:
   Config:
     Prefix: { Value: 'eks-quickstart' }
@@ -456,6 +423,7 @@ Resources:
           S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
       Parameters:
         ConfigSetName: !Ref AWS::StackName
+        NodeVolumeSize: !If [WindowsNodes, 50, !Ref 'AWS::NoValue']
   AccountSharedResources:
     Type: AWS::CloudFormation::Stack
     Condition: CreatePerAccountSharedResources
@@ -542,7 +510,9 @@ Resources:
           - !Ref AWS::NoValue
         NumberOfNodes: !Ref NumberOfNodes
         MaxNumberOfNodes: !Ref MaxNumberOfNodes
-        ManagedNodeGroup: !Ref ManagedNodeGroup
+        NodeGroupOS: !Ref NodeGroupOS
+        NodeGroupType: !Ref NodeGroupType
+        NodeInstanceFamily: !Ref NodeInstanceFamily
         NodeInstanceType: !Ref NodeInstanceType
         RemoteAccessCIDR: !Ref RemoteAccessCIDR
         AdditionalEKSAdminUserArn: !Ref AdditionalEKSAdminUserArn
@@ -562,11 +532,6 @@ Resources:
         NewRelicLicenseKey: !Ref NewRelicLicenseKey
         NewRelicIntegration: !Ref NewRelicIntegration
         ConfigSetName: !If [CreateAdvancedConfigWithDefaults, !Ref 'AWS::StackName', !Ref ConfigSetName]
-        WindowsSupport: !Ref WindowsSupport
-        WindowsNodeInstanceType: !Ref WindowsNodeInstanceType
-        WindowsNumberOfNodes: !Ref WindowsNumberOfNodes
-        WindowsNodeGroupName: !Ref WindowsNodeGroupName
-        WindowsNodeVolumeSize: !Ref WindowsNodeVolumeSize
         TestSuite: !Ref TestSuite
 Outputs:
   EKSClusterName:

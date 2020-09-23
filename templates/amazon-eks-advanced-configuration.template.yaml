@@ -19,6 +19,13 @@ Metadata:
     - Disabled
     - Managed
     - '(Optional)'
+    - Node
+    - Unmanaged
+    - Default
+    - Launch
+    - Latest
+    - Custom
+    - Security Group
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
@@ -39,12 +46,17 @@ Metadata:
           default: Default EKS node group configuration
         Parameters:
           - NodeGroupName
-          - NodeAMIOS
           - NodeVolumeSize
-          - ManagedNodeGroupAMIType
-          - MangedNodeGroupLabel
           - CustomAmiId
-          - BootstrapArguments
+          - Labels
+          - Taints
+          - LaunchTemplateId
+          - LaunchTemplateVersion
+          - NodeSecurityGroupId
+          - NodeInstanceType2
+          - NodeInstanceType3
+          - NodeInstanceType4
+          - OnDemandPercentage
       - Label:
           default: Bastion configuration
         Parameters:
@@ -81,18 +93,10 @@ Metadata:
         default: Enable IAM OIDC provider
       NodeGroupName:
         default: Name
-      NodeAMIOS:
-        default: Operating system
       NodeVolumeSize:
         default: Volume size
-      ManagedNodeGroupAMIType:
-        default: Managed node group AMI type
-      MangedNodeGroupLabel:
-        default: Managed node group label
       CustomAmiId:
         default: Custom AMI ID
-      BootstrapArguments:
-        default: Bootstrap arguments
       BastionOS:
         default: Operating system
       BastionBootstrapScript:
@@ -115,6 +119,24 @@ Metadata:
         default: Throughput mode
       EfsProvisionedThroughputInMibps:
         default: Provisioned throughput in Mibps
+      Labels:
+        default: Labels
+      Taints:
+        default: Taints
+      LaunchTemplateId:
+        default: Launch template ID
+      LaunchTemplateVersion:
+        default: Launch template version
+      NodeSecurityGroupId:
+        default: Security group ID
+      NodeInstanceType2:
+        default: Instance type 2
+      NodeInstanceType3:
+        default: Instance type 3
+      NodeInstanceType4:
+        default: Instance type 4
+      OnDemandPercentage:
+        default: On demand percentage
 Parameters:
   ConfigSetName:
     Type: String
@@ -143,14 +165,6 @@ Parameters:
     Description: "(Optional) KMS key to use for envelope encryption of Kubernetes secrets. If this parameter is omitted
       A key will be created for the cluster. The CMK must be symmetric, created in the same region as the cluster, and
       if the CMK was created in a different account, the user must have access to the CMK."
-  NodeAMIOS:
-    AllowedValues:
-      - Amazon-Linux-HVM
-      - SUSE-SLES-15-HVM
-      - BottleRocket
-    Default: Amazon-Linux-HVM
-    Type: String
-    Description: Choose the operating system to be used for the default node group.
   EKSPublicAccessCIDRs:
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
@@ -170,16 +184,6 @@ Parameters:
     Type: String
     Default: ""
     Description: "(Optional) If an AMI id is specified here it will be used instead of the ami determined from the OS/Region."
-  ManagedNodeGroupAMIType:
-    Description: Only applies if you chose "yes" for "Managed node group." Select the AMI type for your managed node group. GPU instance types should use the "AL2_x86_64_GPU" AMI
-      type, which uses the Amazon EKS-optimized Linux AMI with GPU support.
-    AllowedValues: [ "AL2_x86_64", "AL2_x86_64_GPU", ""]
-    Default: "AL2_x86_64"
-    Type: String
-  MangedNodeGroupLabel:
-    Description: "(Optional) Add a custom name label to the managed node group nodes. If you dont do this then a default one will be added for you."
-    Type: String
-    Default: ""
   KubernetesVersion:
     Type: String
     AllowedValues: [ "1.15", "1.16", "1.17" ]
@@ -190,10 +194,6 @@ Parameters:
     AllowedValues: [ "Enabled", "Disabled" ]
     Default: "Enabled"
     Description: Enables IAM roles for Kubernetes service accounts.
-  BootstrapArguments:
-    Type: String
-    Default: ""
-    Description: "(Optional) Bootstrap arguments to pass to the EKS node bootstrap script, available arguments are listed in https://github.com/awslabs/amazon-eks-ami/ ."
   BastionOS:
     Type: String
     AllowedValues: [ "Amazon-Linux2-HVM", "Amazon-Linux-HVM", "CentOS-7-HVM", "Ubuntu-Server-14.04-LTS-HVM", "Ubuntu-Server-16.04-LTS-HVM", "SUSE-SLES-15-HVM" ]
@@ -245,16 +245,48 @@ Parameters:
     MaxValue: 1024
     Default: 0
     Description: Only applies when "EFS storage class" is set to "Enabled." If "EFS throughput mode" is set to "provisioned" value must be between 0-1024, if set to "bursting" this must be set to 0.
+  OnDemandPercentage:
+    Type: Number
+    MinValue: 0
+    MaxValue: 100
+    Default: 100
+    Description: Only applies if "Node group type" is set to "Unmanaged." Set the percentage of on demand instances and spot instances. With the default of 100, the percentages are 100% for on demand instances and 0% for spot instances.
+  NodeInstanceType2:
+    Default: ""
+    Description: (Optional) Only applies if "Node group type" is set to "Unmanaged." 2nd type of EC2 instance for the node instances.
+    Type: String
+  NodeInstanceType3:
+    Default: ""
+    Description: (Optional) Only applies if "Node group type" is set to "Unmanaged." 3rd type of EC2 instance for the node instances.
+    Type: String
+  NodeInstanceType4:
+    Default: ""
+    Description: (Optional) Only applies if "Node group type" is set to "Unmanaged." 4th type of EC2 instance for the node instances.
+    Type: String
+  LaunchTemplateId:
+    Default: ""
+    Type: String
+    Description: (Optional) ID of an existing launch template to use when creating the node group.
+  LaunchTemplateVersion:
+    Default: ""
+    Type: String
+    Description: Must be specified if "Launch template ID" is provided. Can not be "$Latest" or "$Default". This value sets the launch template version for the node group to use.
+  Labels:
+    Default: ""
+    Type: String
+    Description: (Optional) Comma separated list of <key>=<value> pairs representing node labels to assign to the node group. Ignored if "Custom launch template" is provided.
+  Taints:
+    Default: ""
+    Type: String
+    Description: (Optional) Comma separated list of <key>=<value>:<effect> representing node taints to assign to the node group. Ignored if "Custom launch template" is provided.
+  NodeSecurityGroupId:
+    Default: ""
+    Type: String
+    Description: (Optional) Provide the id of a Security Group to use for this node group. If not specified, one will be created.
 Mappings:
   Config:
     ParameterPrefix: { Value: '/quickstart/amazon-eks' }
 Resources:
-  NodeAMIOSParameter:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Type: String
-      Value: !Sub '{ "Value": "${NodeAMIOS}" }'
-      Name: !Sub ["${ParameterPrefix}/${ConfigSetName}/nodegroup/NodeAMIOS", {ParameterPrefix: !FindInMap [Config, ParameterPrefix, Value]}]
   EKSPrivateAccessEndpointParameter:
     Type: AWS::SSM::Parameter
     Properties:
@@ -307,18 +339,60 @@ Resources:
       Type: String
       Value: !Sub '{ "Value": "${CustomAmiId}" }'
       Name: !Sub ["${ParameterPrefix}/${ConfigSetName}/default-nodegroup/CustomAmiId", {ParameterPrefix: !FindInMap [Config, ParameterPrefix, Value]}]
-  ManagedNodeGroupAMITypeParameter:
+  NodeSecurityGroupIdParameter:
     Type: AWS::SSM::Parameter
     Properties:
       Type: String
-      Value: !Sub '{ "Value": "${ManagedNodeGroupAMIType}" }'
-      Name: !Sub ["${ParameterPrefix}/${ConfigSetName}/default-nodegroup/ManagedNodeGroupAMIType", {ParameterPrefix: !FindInMap [Config, ParameterPrefix, Value]}]
-  MangedNodeGroupLabelParameter:
+      Value: !Sub '{ "Value": "${NodeSecurityGroupId}" }'
+      Name: !Sub ["${ParameterPrefix}/${ConfigSetName}/default-nodegroup/NodeSecurityGroupId", {ParameterPrefix: !FindInMap [Config, ParameterPrefix, Value]}]
+  TaintsParameter:
     Type: AWS::SSM::Parameter
     Properties:
       Type: String
-      Value: !Sub '{ "Value": "${MangedNodeGroupLabel}" }'
-      Name: !Sub ["${ParameterPrefix}/${ConfigSetName}/default-nodegroup/MangedNodeGroupLabel", {ParameterPrefix: !FindInMap [Config, ParameterPrefix, Value]}]
+      Value: !Sub '{ "Value": "${Taints}" }'
+      Name: !Sub ["${ParameterPrefix}/${ConfigSetName}/default-nodegroup/Taints", {ParameterPrefix: !FindInMap [Config, ParameterPrefix, Value]}]
+  LabelsParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Type: String
+      Value: !Sub '{ "Value": "${Labels}" }'
+      Name: !Sub ["${ParameterPrefix}/${ConfigSetName}/default-nodegroup/Labels", {ParameterPrefix: !FindInMap [Config, ParameterPrefix, Value]}]
+  LaunchTemplateVersionParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Type: String
+      Value: !Sub '{ "Value": "${LaunchTemplateVersion}" }'
+      Name: !Sub ["${ParameterPrefix}/${ConfigSetName}/default-nodegroup/LaunchTemplateVersion", {ParameterPrefix: !FindInMap [Config, ParameterPrefix, Value]}]
+  LaunchTemplateIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Type: String
+      Value: !Sub '{ "Value": "${LaunchTemplateId}" }'
+      Name: !Sub ["${ParameterPrefix}/${ConfigSetName}/default-nodegroup/LaunchTemplateId", {ParameterPrefix: !FindInMap [Config, ParameterPrefix, Value]}]
+  NodeInstanceType2Parameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Type: String
+      Value: !Sub '{ "Value": "${NodeInstanceType2}" }'
+      Name: !Sub ["${ParameterPrefix}/${ConfigSetName}/default-nodegroup/NodeInstanceType2", {ParameterPrefix: !FindInMap [Config, ParameterPrefix, Value]}]
+  NodeInstanceType3Parameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Type: String
+      Value: !Sub '{ "Value": "${NodeInstanceType3}" }'
+      Name: !Sub ["${ParameterPrefix}/${ConfigSetName}/default-nodegroup/NodeInstanceType3", {ParameterPrefix: !FindInMap [Config, ParameterPrefix, Value]}]
+  NodeInstanceType4Parameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Type: String
+      Value: !Sub '{ "Value": "${NodeInstanceType4}" }'
+      Name: !Sub ["${ParameterPrefix}/${ConfigSetName}/default-nodegroup/NodeInstanceType4", {ParameterPrefix: !FindInMap [Config, ParameterPrefix, Value]}]
+  OnDemandPercentageParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Type: String
+      Value: !Sub '{ "Value": "${OnDemandPercentage}" }'
+      Name: !Sub ["${ParameterPrefix}/${ConfigSetName}/default-nodegroup/OnDemandPercentage", {ParameterPrefix: !FindInMap [Config, ParameterPrefix, Value]}]
   KubernetesVersionParameter:
     Type: AWS::SSM::Parameter
     Properties:
@@ -331,12 +405,6 @@ Resources:
       Type: String
       Value: !Sub '{ "Value": "${IamOidcProvider}" }'
       Name: !Sub ["${ParameterPrefix}/${ConfigSetName}/cluster/IamOidcProvider", {ParameterPrefix: !FindInMap [Config, ParameterPrefix, Value]}]
-  BootstrapArgumentsParameter:
-    Type: AWS::SSM::Parameter
-    Properties:
-      Type: String
-      Value: !Sub '{ "Value": "${BootstrapArguments}" }'
-      Name: !Sub ["${ParameterPrefix}/${ConfigSetName}/default-nodegroup/BootstrapArguments", {ParameterPrefix: !FindInMap [Config, ParameterPrefix, Value]}]
   BastionOSParameter:
     Type: AWS::SSM::Parameter
     Properties:

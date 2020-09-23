@@ -50,39 +50,6 @@ Parameters:
   MaxNumberOfNodes:
     Default: 3
     Type: Number
-  ManagedNodeGroup:
-    AllowedValues: [ "yes", "no" ]
-    Default: "no"
-    Description: Choose "yes" if you want to use a managed node group.
-    Type: String
-  WindowsSupport:
-    AllowedValues: ["Enabled", "Disabled"]
-    Description: Choose "Enabled" to create a Windows node group.
-    Type: String
-    Default: "Disabled"
-  WindowsCustomAmiId:
-    Description: (Optional) Specify your own custom AMI ID.
-    Type: String
-    Default: ""
-  WindowsNodeInstanceType:
-    Default: t3.medium
-    AllowedValues: [t3.nano,t3.micro, t3.small, t3.medium, t3.large, t3.xlarge, t3.2xlarge, m5.large, m5.xlarge, m5.2xlarge
-                    m5.4xlarge, m5.12xlarge, m5.24xlarge, c5.large, c5.xlarge, c5.2xlarge, c5.4xlarge, c5.9xlarge, c5.18xlarge,
-                    i3.large, i3.xlarge, i3.2xlarge, i3.4xlarge, i3.8xlarge, i3.16xlarge, x1.16xlarge, x1.32xlarge, p3.2xlarge,
-                    p3.8xlarge, p3.16xlarge, r5.large, r5.xlarge, r5.2xlarge, r5.4xlarge, r5.12xlarge, r5.24xlarge, r5d.large, 
-                    r5d.xlarge, r5d.2xlarge, r5d.4xlarge, r5d.12xlarge, r5d.24xlarge, z1d.large, z1d.xlarge, z1d.2xlarge. 
-                    z1d.3xlarge, z1d.6xlarge, z1d.12xlarge]
-    ConstraintDescription: Must be a valid EC2 instance type
-    Type: String
-  WindowsNumberOfNodes:
-    Default: 3
-    Type: Number
-  WindowsNodeGroupName:
-    Default: Default-Windows
-    Type: String
-  WindowsNodeVolumeSize:
-    Default: 50
-    Type: String
   VPCID:
     Type: "AWS::EC2::VPC::Id"
   PublicSubnet1ID:
@@ -159,11 +126,29 @@ Parameters:
     Type: String
     AllowedValues: [Enabled, Disabled]
     Default: Disabled
+  NodeInstanceFamily:
+    AllowedValues: ['Standard', 'ARM', 'GPU']
+    Type: String
+    Description: Choose "ARM" to use an ARM based AMI, choose "GPU" to use an AMI that supports GPU and Inferentia based instance types. Ignored if "Custom launch template" is provided.
+  NodeGroupOS:
+    AllowedValues:
+      - 'Amazon Linux 2'
+      - 'Bottlerocket'
+      - 'Windows'
+    Default: 'Amazon Linux 2'
+    Description: The Linux distribution for the AMI to be used for the node instances. Ignored if "Custom launch template" is provided.
+    Type: String
+  NodeGroupType:
+    Type: String
+    AllowedValues: [ Managed, Unmanaged ]
+    Default: Managed
+    Description: Choose "Unmanaged" to create an auto-scaling group without using the EKS managed node groups feature.
 Mappings:
   Config:
     Prefix: { Value: 'eks-quickstart' }
     ParameterPrefix: { Value: '/quickstart/amazon-eks' }
 Conditions:
+  EnableProxy: !Not [!Equals [!Ref HttpProxy, ""]]
   DeployTestStack: !Equals [!Ref TestSuite, Enabled]
   EnableSnyk: !Equals [ !Ref SnykIntegration, Enabled]
   EnableNewRelic: !Equals [ !Ref NewRelicIntegration, Enabled]
@@ -183,14 +168,13 @@ Conditions:
   EnableALBIngressController: !Equals [!Ref 'ProvisionALBIngressController', 'Enabled']
   EnableMonitoringPrometheusGrafana: !Equals [!Ref 'ProvisionMonitoringStack', 'Prometheus + Grafana']
   EnableEfs: !Equals [!Ref 'EfsStorageClass', 'Enabled']
-  EnableWindows: !Equals [!Ref 'WindowsSupport', 'Enabled']
+  EnableWindows: !Equals [!Ref 'NodeGroupOS', 'Windows']
   UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
   GenerateClusterName: !Equals [!Ref 'EKSClusterName', '']
   EnableOIDC: !Or
     - !Equals [!Ref 'ProvisionALBIngressController', 'Enabled']
-    - !Equals [!Ref 'WindowsSupport', 'Enabled']
+    - !Equals [!Ref 'NodeGroupOS', 'Windows']
     - !Equals [~~/<ConfigSetName>/cluster/IamOidcProvider~~, "Enabled"]
-  UsingBottleRocket: !Equals [~~/<ConfigSetName>/nodegroup/NodeAMIOS~~, 'BottleRocket']
 Resources:
   BastionEksPermissions:
     Condition: EnableBastion
@@ -257,99 +241,64 @@ Resources:
           BastionVariables: ~~/<ConfigSetName>/bastion/BastionVariables~~
   NodeGroupStack:
     Type: "AWS::CloudFormation::Stack"
+    Metadata:
+      DependsOn:
+        - !If [EnableWindows, !Ref WindowsSupportNodeGroupStack, !Ref 'AWS::NoValue']
+        - !Ref EKSControlPlane
     Properties:
       TemplateURL: !Sub
         - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-amazon-eks-nodegroup/templates/amazon-eks-nodegroup.template.yaml'
         - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
           S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
       Parameters:
-        TargetGroupARNs: ""
         HttpProxy: !Ref HttpProxy
         KeyPairName: !Ref 'KeyPairName'
-        NodeAMIOS: ~~/<ConfigSetName>/nodegroup/NodeAMIOS~~
-        PrivateSubnet1ID: !Ref PrivateSubnet1ID
-        PrivateSubnet2ID: !If [2AZDeployment, !Ref PrivateSubnet2ID, !Ref "AWS::NoValue" ]
-        PrivateSubnet3ID: !If [3AZDeployment, !Ref PrivateSubnet3ID, !Ref "AWS::NoValue" ]
-        VPCID: !Ref VPCID
+        NodeGroupOS: !Ref NodeGroupOS
+        Subnet1ID: !Ref PrivateSubnet1ID
+        Subnet2ID: !If [2AZDeployment, !Ref PrivateSubnet2ID, !Ref "AWS::NoValue" ]
+        Subnet3ID: !If [3AZDeployment, !Ref PrivateSubnet3ID, !Ref "AWS::NoValue" ]
         NodeInstanceType: !Ref NodeInstanceType
         NumberOfNodes: !Ref NumberOfNodes
         MaxNumberOfNodes: !Ref MaxNumberOfNodes
         NodeGroupName: ~~/<ConfigSetName>/default-nodegroup/NodeGroupName~~
         NodeVolumeSize: ~~/<ConfigSetName>/default-nodegroup/NodeVolumeSize~~
         CustomAmiId: ~~/<ConfigSetName>/default-nodegroup/CustomAmiId~~
-        ManagedNodeGroup: !Ref ManagedNodeGroup
-        ManagedNodeGroupAMIType: ~~/<ConfigSetName>/default-nodegroup/ManagedNodeGroupAMIType~~
-        MangedNodeGroupLabel: ~~/<ConfigSetName>/default-nodegroup/MangedNodeGroupLabel~~
-        EKSControlPlane: !GetAtt EKSControlPlane.Outputs.EKSName
-        ControlPlaneSecurityGroup: !Ref ControlPlaneSecurityGroup
-        NodeInstanceProfile: !GetAtt IamStack.Outputs.NodeInstanceProfile
-        NodeInstanceRoleName: !GetAtt IamStack.Outputs.NodeInstanceRoleName
-        NodeInstanceRoleArn: !GetAtt IamStack.Outputs.NodeInstanceRoleArn
-        KubernetesVersion: ~~/<ConfigSetName>/controlplane/KubernetesVersion~~
-        BootstrapArguments: ~~/<ConfigSetName>/default-nodegroup/BootstrapArguments~~
-        QSS3BucketName: !Ref QSS3BucketName
-        QSS3KeyPrefix: !Sub "${QSS3KeyPrefix}submodules/quickstart-amazon-eks-nodegroup/"
-        QSS3BucketRegion: !Ref QSS3BucketRegion
-  BtlRktNodeGroupStack:
+        EKSClusterName: !If [GenerateClusterName, !Ref GenerateName, !Ref EKSClusterName]
+        NodeInstanceFamily: !Ref NodeInstanceFamily
+        NodeGroupType: !Ref NodeGroupType
+        OndemandPercentage: ~~/<ConfigSetName>/default-nodegroup/OnDemandPercentage~~
+        NodeInstanceType2: ~~/<ConfigSetName>/default-nodegroup/NodeInstanceType2~~
+        NodeInstanceType3: ~~/<ConfigSetName>/default-nodegroup/NodeInstanceType3~~
+        NodeInstanceType4: ~~/<ConfigSetName>/default-nodegroup/NodeInstanceType4~~
+        Labels: ~~/<ConfigSetName>/default-nodegroup/Labels~~
+        Taints: ~~/<ConfigSetName>/default-nodegroup/Taints~~
+        NodeSecurityGroupId: ~~/<ConfigSetName>/default-nodegroup/NodeSecurityGroupId~~
+        LaunchTemplateId: ~~/<ConfigSetName>/default-nodegroup/LaunchTemplateId~~
+        LaunchTemplateVersion: ~~/<ConfigSetName>/default-nodegroup/LaunchTemplateVersion~~
+  WindowsSupportNodeGroupStack:
     Type: "AWS::CloudFormation::Stack"
-    Condition: UsingBottleRocket
+    Condition: EnableWindows
+    Metadata:
+      cfn-lint: {config: {ignore_checks: [E9902, W9901]}}
     Properties:
       TemplateURL: !Sub
-        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-amazon-eks-nodegroup/templates/amazon-eks-bottlerocket-nodegroup.template.yaml'
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-amazon-eks-nodegroup/templates/amazon-eks-nodegroup.template.yaml'
         - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
           S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
       Parameters:
-        TargetGroupARNs: ""
         HttpProxy: !Ref HttpProxy
         KeyPairName: !Ref 'KeyPairName'
-        NodeAMIOS: ~~/<ConfigSetName>/nodegroup/NodeAMIOS~~
-        PrivateSubnet1ID: !Ref PrivateSubnet1ID
-        PrivateSubnet2ID: !If [2AZDeployment, !Ref PrivateSubnet2ID, !Ref "AWS::NoValue" ]
-        PrivateSubnet3ID: !If [3AZDeployment, !Ref PrivateSubnet3ID, !Ref "AWS::NoValue" ]
-        VPCID: !Ref VPCID
-        NodeInstanceType: !Ref NodeInstanceType
-        NumberOfNodes: !Ref NumberOfNodes
-        MaxNumberOfNodes: !Ref MaxNumberOfNodes
-        NodeGroupName: ~~/<ConfigSetName>/default-nodegroup/NodeGroupName~~
-        NodeVolumeSize: ~~/<ConfigSetName>/default-nodegroup/NodeVolumeSize~~n
-        EKSControlPlane: !GetAtt EKSControlPlane.Outputs.EKSName
-        ControlPlaneSecurityGroup: !Ref ControlPlaneSecurityGroup
-        NodeInstanceProfile: !GetAtt IamStack.Outputs.NodeInstanceProfile
-        NodeInstanceRoleName: !GetAtt IamStack.Outputs.NodeInstanceRoleName
-        NodeInstanceRoleArn: !GetAtt IamStack.Outputs.NodeInstanceRoleArn
-        KubernetesVersion: ~~/<ConfigSetName>/controlplane/KubernetesVersion~~
-        BootstrapArguments: ~~/<ConfigSetName>/default-nodegroup/BootstrapArguments~~
-        QSS3BucketName: !Ref QSS3BucketName
-        QSS3KeyPrefix: !Sub "${QSS3KeyPrefix}/submodules/quickstart-amazon-eks-nodegroup/"
-        QSS3BucketRegion: !Ref QSS3BucketRegion
-  WindowsNodeGroupStack:
-    Condition: EnableWindows
-    DependsOn: WindowsSupportStack
-    Type: "AWS::CloudFormation::Stack"
-    Metadata:
-      cfn-lint: { config: { ignore_checks: [E9902] } }
-    Properties:
-      TemplateURL: !Sub
-        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-amazon-eks-nodegroup/templates/amazon-eks-windows-nodegroup.template.yaml'
-        - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
-          S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
-      Parameters:
-        KeyPairName: !Ref 'KeyPairName'
-        PrivateSubnet1ID: !Ref PrivateSubnet1ID
-        PrivateSubnet2ID: !If [2AZDeployment, !Ref PrivateSubnet2ID, !Ref "AWS::NoValue" ]
-        PrivateSubnet3ID: !If [3AZDeployment, !Ref PrivateSubnet3ID, !Ref "AWS::NoValue" ]
-        CustomAmiId: !Ref WindowsCustomAmiId
-        NodeInstanceType: !Ref WindowsNodeInstanceType
-        NumberOfNodes: !Ref WindowsNumberOfNodes
-        NodeGroupName: !Ref WindowsNodeGroupName
-        NodeVolumeSize: !Ref WindowsNodeVolumeSize
-        NodeSecurityGroup: !GetAtt NodeGroupStack.Outputs.EKSNodeSecurityGroup
-        ClusterName: !GetAtt EKSControlPlane.Outputs.EKSName
-        NodeInstanceProfile: !GetAtt IamStack.Outputs.WindowsNodeInstanceProfile
-        NodeInstanceRoleArn: !GetAtt IamStack.Outputs.WindowsNodeInstanceRoleArn
-        NodeAmiIdSSMParam: /aws/service/ami-windows-latest/Windows_Server-2019-English-Core-EKS_Optimized-1.14/image_id
-        BootstrapArguments: ""
-        MaxNumberOfNodes: ""
+        NodeGroupOS: "Amazon Linux 2"
+        Subnet1ID: !Ref PrivateSubnet1ID
+        Subnet2ID: !If [2AZDeployment, !Ref PrivateSubnet2ID, !Ref "AWS::NoValue" ]
+        Subnet3ID: !If [3AZDeployment, !Ref PrivateSubnet3ID, !Ref "AWS::NoValue" ]
+        NodeInstanceType: t3.large
+        NumberOfNodes: 1
+        NodeGroupName: windows-support-al2
+        NodeVolumeSize: 20
+        EKSClusterName: !Ref EKSClusterName
+        NodeInstanceFamily: Standard
+        NodeGroupType: Managed
   BastionSShToNodes:
     Condition: EnableBastion
     Type: "AWS::EC2::SecurityGroupIngress"
@@ -385,10 +334,8 @@ Resources:
           S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
       Parameters:
         QSS3BucketName: !Ref QSS3BucketName
-        QSS3KeyPrefix: !Ref QSS3KeyPrefix
         CreateBastionRole: !If [CustomBastionRole, "Disabled", !If [EnableBastion, "Enabled", "Disabled"]]
         BastionIAMRoleName: ~~/<ConfigSetName>/bastion/BastionIAMRoleName~~
-        CreateWindowsRole: !Ref WindowsSupport
         CloudFormationKubernetesVPCRoleExists: !Ref CloudFormationKubernetesVPCRoleExists
   FunctionStack:
     Type: "AWS::CloudFormation::Stack"
@@ -424,7 +371,7 @@ Resources:
         - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
           S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
       Parameters:
-        NodeInstanceRoleName: !GetAtt IamStack.Outputs.NodeInstanceRoleName
+        NodeInstanceRoleName: !Sub ['${Prefix}-NodeInstance', {Prefix: !FindInMap [Config, Prefix, Value]}]
         NodeAutoScalingGroup: !GetAtt NodeGroupStack.Outputs.NodeAutoScalingGroup
         EksClusterName: !GetAtt EKSControlPlane.Outputs.EKSName
         KubernetesVersion: ~~/<ConfigSetName>/controlplane/KubernetesVersion~~
@@ -503,8 +450,6 @@ Resources:
               - !Join [",", [ !Ref PrivateSubnet1ID, !Ref PrivateSubnet2ID ]]
               - !Join [",", [ !Ref PrivateSubnet1ID ]]
         RoleArn: !Sub ["arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${Prefix}-ControlPlane", {Prefix: !FindInMap [Config, Prefix, Value]}]
-        NodeInstanceRoleArn: !GetAtt IamStack.Outputs.NodeInstanceRoleArn
-        WindowsNodeInstanceRoleArn: !GetAtt IamStack.Outputs.WindowsNodeInstanceRoleArn
         AdditionalEKSAdminUserArn: !Ref AdditionalEKSAdminUserArn
         AdditionalEKSAdminRoleArn: !Ref AdditionalEKSAdminRoleArn
         KubernetesVersion: ~~/<ConfigSetName>/controlplane/KubernetesVersion~~
@@ -626,7 +571,6 @@ Resources:
         - !Ref ControlPlaneSecurityGroupIngress
         - !Ref NodeGroupStack
         - !If [EnableFargate, !Ref FargateNamespaces, !Ref 'AWS::NoValue']
-        - !If [EnableWindows, [!Ref WindowsSupportStack,!Ref WindowsNodeGroupStack], !Ref 'AWS::NoValue']
     Properties:
       TemplateURL: !Sub
         - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/amazon-eks-test.template.yaml'
@@ -634,7 +578,7 @@ Resources:
           S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
       Parameters:
         ClusterName: !GetAtt EKSControlPlane.Outputs.EKSName
-        TestWindows: !Ref WindowsSupport
+        TestWindows: !If [EnableWindows, Enabled, Disabled]
   NewRelicStack:
     DependsOn: FunctionStack
     Condition: EnableNewRelic
@@ -687,6 +631,15 @@ Resources:
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
         QSS3BucketRegion: !Ref QSS3BucketRegion
+  ConfigureProxy:
+    Condition: EnableProxy
+    DependsOn: EKSControlPlane
+    Type: "Custom::EnableProxy"
+    Properties:
+      ServiceToken: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:EKS-QuickStart-KubeManifest-${EKSClusterName}'
+      HttpProxy: !Ref HttpProxy
+      VpcId: !Ref VPCID
+      ClusterName: !Ref EKSClusterName
 Outputs:
   BastionIP:
     Value: !If
@@ -705,16 +658,10 @@ Outputs:
       - ""
   EKSClusterName:
     Value: !GetAtt EKSControlPlane.Outputs.EKSName
-  NodeInstanceProfile:
-    Value: !GetAtt IamStack.Outputs.NodeInstanceProfile
-  NodeInstanceRoleName:
-    Value: !GetAtt IamStack.Outputs.NodeInstanceRoleName
   ControlPlaneSecurityGroup:
     Value: !GetAtt ControlPlaneSecurityGroup.GroupId
   NodeGroupSecurityGroup:
     Value: !GetAtt NodeGroupStack.Outputs.EKSNodeSecurityGroup
-  NodeInstanceRoleArn:
-    Value: !GetAtt IamStack.Outputs.NodeInstanceRoleArn
   NodeAutoScalingGroup:
     Value: !GetAtt NodeGroupStack.Outputs.NodeAutoScalingGroup
   OIDCIssuerURL:

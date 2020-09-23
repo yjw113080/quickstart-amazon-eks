@@ -14,20 +14,7 @@ Parameters:
       numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start
       or end with a hyphen (-).'
     Type: String
-  QSS3KeyPrefix:
-    AllowedPattern: ^[0-9a-zA-Z-/.]*$
-    ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters,
-      uppercase letters, hyphens (-), dots(.) and forward slash (/).
-    Default: quickstart-amazon-eks/
-    Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
-      can include numbers, lowercase letters, uppercase letters, hyphens (-), dots(.) and
-      forward slash (/).
-    Type: String
   CreateBastionRole:
-    Type: String
-    Default: "Enabled"
-    AllowedValues: ["Enabled", "Disabled"]
-  CreateWindowsRole:
     Type: String
     Default: "Enabled"
     AllowedValues: ["Enabled", "Disabled"]
@@ -39,7 +26,6 @@ Parameters:
     Default: ""
 Conditions:
   EnableBastionRole: !Equals [!Ref CreateBastionRole, "Enabled"]
-  EnableWindowsRole: !Equals [!Ref CreateWindowsRole, "Enabled"]
   UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
   CreateCloudFormationKubernetesVPCRole: !Not [!Equals [!Ref CloudFormationKubernetesVPCRoleExists, 'CloudFormation-Kubernetes-VPC']]
 Resources:
@@ -90,75 +76,6 @@ Resources:
                   - events:PutTargets
                   - events:RemoveTargets
                 Resource:  "*"
-  NodeInstanceProfile:
-    Type: AWS::IAM::InstanceProfile
-    Properties:
-      Path: "/"
-      Roles:
-        - !Ref NodeInstanceRole
-  NodeInstanceRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: !Sub "ec2.${AWS::URLSuffix}"
-            Action:
-              - sts:AssumeRole
-      Path: "/"
-      ManagedPolicyArns:
-        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AmazonEKSWorkerNodePolicy'
-        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AmazonEKS_CNI_Policy'
-        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly'
-        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AmazonElasticFileSystemReadOnlyAccess'
-      Policies:
-        - PolicyName: QSBucketAccess
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action: s3:GetObject
-                Resource: !Sub
-                 - "arn:${AWS::Partition}:s3:::${BucketName}/${QSS3KeyPrefix}*"
-                 - BucketName: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
-  WindowsNodeInstanceRole:
-    Condition: EnableWindowsRole
-    Type: "AWS::IAM::Role"
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - !Sub "ec2.${AWS::URLSuffix}"
-            Action:
-              - "sts:AssumeRole"
-      Path: /      
-      ManagedPolicyArns:
-        - !Sub "arn:${AWS::Partition}:iam::aws:policy/AmazonEKSWorkerNodePolicy"
-        - !Sub "arn:${AWS::Partition}:iam::aws:policy/AmazonEKS_CNI_Policy"
-        - !Sub "arn:${AWS::Partition}:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-        - !Sub 'arn:${AWS::Partition}:iam::aws:policy/AmazonElasticFileSystemReadOnlyAccess'
-      Policies:
-        - PolicyName: QSBucketAccess
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action: s3:GetObject
-                Resource: !Sub
-                 - "arn:${AWS::Partition}:s3:::${BucketName}/${QSS3KeyPrefix}*"
-                 - BucketName: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
-  WindowsNodeInstanceProfile:
-    Condition: EnableWindowsRole
-    Type: "AWS::IAM::InstanceProfile"
-    Properties:
-      Path: /
-      Roles:
-        - Ref: WindowsNodeInstanceRole
   BastionRole:
     Condition: EnableBastionRole
     Type: "AWS::IAM::Role"
@@ -222,15 +139,5 @@ Resources:
 Outputs:
   KubernetesAdminRoleArn:
     Value: !GetAtt KubernetesAdminRole.Arn
-  NodeInstanceProfile:
-    Value: !Ref NodeInstanceProfile
-  NodeInstanceRoleArn:
-    Value: !GetAtt NodeInstanceRole.Arn
-  NodeInstanceRoleName:
-    Value: !Ref NodeInstanceRole
-  WindowsNodeInstanceProfile:
-    Value: !If [EnableWindowsRole, !Ref WindowsNodeInstanceProfile, ""]
-  WindowsNodeInstanceRoleArn:
-    Value: !If [EnableWindowsRole, !GetAtt WindowsNodeInstanceRole.Arn, ""]
   BastionRole:
     Value: !If [EnableBastionRole, !Ref BastionRole, !Ref BastionIAMRoleName]

@@ -9,9 +9,13 @@ project:
     QSS3BucketName: $[taskcat_autobucket]
     QSS3BucketRegion: $[taskcat_current_region]
     ProvisionBastionHost: Enabled
-    ManagedNodeGroup: 'no'
+    NodeGroupType: 'Unmanaged'
+    NodeInstanceFamily: Standard
+    PerRegionSharedResources: 'Yes'
+    PerAccountSharedResources: 'No'
   lambda_source_path: functions/source
   lambda_zip_path: functions/packages
+  package_lambda: false
 tests:
   defaults:
     parameters:
@@ -21,7 +25,6 @@ tests:
     parameters:
       AvailabilityZones: $[taskcat_genaz_3]
       EKSPublicAccessEndpoint: Disabled
-
     regions:
       - ap-northeast-2
   cluster-autoscaler:
@@ -31,16 +34,6 @@ tests:
       EKSPublicAccessEndpoint: Disabled
     regions:
     - eu-central-1
-  efs:
-    parameters:
-      AvailabilityZones: $[taskcat_genaz_3]
-      EfsStorageClass: Enabled
-      ClusterAutoScaler: Disabled
-      ManagedNodeGroup: 'yes'
-      ManagedNodeGroupAMIType: AL2_x86_64
-      EKSPublicAccessEndpoint: Disabled
-    regions:
-    - us-east-1
   efs-prov:
     parameters:
       AvailabilityZones: $[taskcat_genaz_3]
@@ -55,8 +48,7 @@ tests:
     parameters:
       AvailabilityZones: $[taskcat_genaz_3]
       ClusterAutoScaler: Disabled
-      ManagedNodeGroup: 'yes'
-      ManagedNodeGroupAMIType: AL2_x86_64
+      NodeGroupType: 'Managed'
       EKSPublicAccessEndpoint: Enabled
     regions:
     - ap-south-1
@@ -67,7 +59,6 @@ tests:
       EKSPublicAccessEndpoint: Enabled
     regions:
     - ap-southeast-2
-    - us-west-2
   2az:
     parameters:
       AvailabilityZones: $[taskcat_genaz_2]
@@ -75,8 +66,8 @@ tests:
       EKSPublicAccessEndpoint: Enabled
     regions:
     - ca-central-1
-    - cn-north-1
-    - cn-northwest-1
+    #- cn-north-1
+    #- cn-northwest-1
   no-logging:
     parameters:
       AvailabilityZones: $[taskcat_genaz_2]
@@ -89,9 +80,6 @@ tests:
     parameters:
       AvailabilityZones: $[taskcat_genaz_3]
       ClusterAutoScaler: Disabled
-      ManagedNodeGroup: 'yes'
-      ManagedNodeGroupAMIType: AL2_x86_64
-      MangedNodeGroupLabel: TestMNG
       EKSPublicAccessEndpoint: Enabled
     regions:
     - us-west-2
@@ -118,6 +106,8 @@ tests:
       AvailabilityZones: $[taskcat_genaz_3]
       IamOidcProvider: Enabled
       EKSPublicAccessEndpoint: Enabled
+      NodeGroupOS: Bottlerocket
+      NodeInstanceFamily: ARM
   snyk:
     regions:
       - eu-west-3
@@ -138,18 +128,15 @@ tests:
     parameters:
       AvailabilityZones: $[taskcat_genaz_3]
       ClusterAutoScaler: Enabled
-      ManagedNodeGroup: 'yes'
-      ManagedNodeGroupAMIType: AL2_x86_64
+      NodeGroupType: 'Managed'
       EKSPublicAccessEndpoint: Disabled
-      PerRegionSharedResources: 'No'
-      PerAccountSharedResources: 'No'
       TestSuite: Enabled
     regions:
-    - ap-south-1
+    - af-south-1
   windows:
     parameters:
       AvailabilityZones: $[taskcat_genaz_3]
       TestSuite: Enabled
-      WindowsSupport: Enabled
+      NodeGroupOS: Windows
     regions:
     - eu-north-1

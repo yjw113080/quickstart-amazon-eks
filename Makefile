@@ -12,6 +12,13 @@ BUILD_FUNCTIONS ?= true
 ACL ?= 'private'
 RESOURCE_PATH ?=
 RESOURCE_TYPE ?=
+REGIONS ?=
+TEST_NAMES ?=
+REGIONAL_STACK ?= true
+ACCOUNT_STACK ?= true
+CLEAN_ACCOUNT ?= true
+CLEAN_TYPES ?= true
+CLEAN_REGIONAL ?= true
 
 build:
 	mkdir -p output/build/functions
@@ -61,3 +68,12 @@ clean:
 	rm -rf taskcat_outputs
 	rm -rf .taskcat
 	rm -rf functions/packages
+
+clean-aws:
+	PROFILE=$(PROFILE) build/clean-aws.sh "$(REGIONS)"
+
+taskcat:
+	PROFILE=$(PROFILE) TEST_NAMES=$(TEST_NAMES) REGIONS=$(REGIONS) taskcat -q test run -mnl
+
+lint:
+	cfn-lint templates/*.yaml
