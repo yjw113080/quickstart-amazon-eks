@@ -345,6 +345,7 @@ Parameters:
     AllowedValues: ['Standard', 'ARM', 'GPU']
     Type: String
     Description: Choose the instance family to match the value of "Node instance type."
+    Default: Standard
   NodeGroupType:
     Type: String
     AllowedValues: [ Managed, Unmanaged ]

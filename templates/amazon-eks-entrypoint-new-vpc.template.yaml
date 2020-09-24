@@ -381,6 +381,7 @@ Parameters:
     Default: Disabled
     Description: Deploys a test stack that tests components of the Quick Start.
   NodeInstanceFamily:
+    Default: Standard
     AllowedValues: ['Standard', 'ARM', 'GPU']
     Type: String
     Description: Choose the instance family to match the value of "Node instance type."
