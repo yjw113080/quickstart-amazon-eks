@@ -34,7 +34,7 @@ Resources:
   ClusterAutoScalerPolicy:
     Type: AWS::IAM::Policy
     Properties:
-      PolicyName: !Sub 'cluster-as-${AWS::Region}-${NodeAutoScalingGroup}'
+      PolicyName: !Sub '${NodeAutoScalingGroup}'
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
