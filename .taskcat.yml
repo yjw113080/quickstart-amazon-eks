@@ -130,6 +130,7 @@ tests:
       NodeGroupType: 'Managed'
       EKSPublicAccessEndpoint: Disabled
       TestSuite: Enabled
+      ProvisionBastionHost: Disabled
     regions:
     - af-south-1
   windows:
