@@ -75,7 +75,7 @@ tests:
       EKSPublicAccessEndpoint: Enabled
       NodeGroupType: 'Unmanaged'
     regions:
-    - eu-west-1
+    - eu-west-2
   with-hybrid:
     parameters:
       AvailabilityZones: $[taskcat_genaz_3]
@@ -104,7 +104,7 @@ tests:
     - us-east-1
   enable-oidc:
     regions:
-      - eu-west-2
+      - eu-west-1
     parameters:
       AvailabilityZones: $[taskcat_genaz_3]
       IamOidcProvider: Enabled
