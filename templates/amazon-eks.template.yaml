@@ -271,6 +271,7 @@ Resources:
   WindowsSupportNodeGroupStack:
     Type: "AWS::CloudFormation::Stack"
     Condition: EnableWindows
+    DependsOn: EKSControlPlane
     Metadata:
       cfn-lint: {config: {ignore_checks: [E9902, W9901]}}
     Properties:
@@ -289,7 +290,7 @@ Resources:
         NumberOfNodes: 1
         NodeGroupName: windows-support-al2
         NodeVolumeSize: 20
-        EKSClusterName: !Ref EKSClusterName
+        EKSClusterName: !If [GenerateClusterName, !Ref GenerateName, !Ref EKSClusterName]
         NodeInstanceFamily: Standard
         NodeGroupType: Managed
   BastionSShToNodes:
@@ -629,10 +630,12 @@ Resources:
     DependsOn: EKSControlPlane
     Type: "Custom::EnableProxy"
     Properties:
-      ServiceToken: !Sub 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:EKS-QuickStart-KubeManifest-${EKSClusterName}'
+      ServiceToken: !Sub
+        - 'arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:EKS-QuickStart-KubeManifest-${ClusterName}'
+        - ClusterName: !If [GenerateClusterName, !Ref GenerateName, !Ref EKSClusterName]
       HttpProxy: !Ref HttpProxy
       VpcId: !Ref VPCID
-      ClusterName: !Ref EKSClusterName
+      ClusterName: !If [GenerateClusterName, !Ref GenerateName, !Ref EKSClusterName]
 Outputs:
   BastionIP:
     Value: !If
