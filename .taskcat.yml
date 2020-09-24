@@ -8,9 +8,6 @@ project:
     RemoteAccessCIDR: 10.0.0.0/16
     QSS3BucketName: $[taskcat_autobucket]
     QSS3BucketRegion: $[taskcat_current_region]
-    ProvisionBastionHost: Enabled
-    NodeGroupType: 'Unmanaged'
-    NodeInstanceFamily: Standard
   lambda_source_path: functions/source
   lambda_zip_path: functions/packages
   package_lambda: false
@@ -19,6 +16,7 @@ tests:
     parameters:
       AvailabilityZones: $[taskcat_genaz_3]
       EKSPublicAccessEndpoint: Enabled
+      NodeGroupType: 'Unmanaged'
   public-endpoint:
     parameters:
       AvailabilityZones: $[taskcat_genaz_3]
@@ -30,6 +28,7 @@ tests:
       AvailabilityZones: $[taskcat_genaz_3]
       ClusterAutoScaler: Enabled
       EKSPublicAccessEndpoint: Disabled
+      NodeGroupType: 'Unmanaged'
     regions:
     - eu-central-1
   efs-prov:
@@ -40,13 +39,13 @@ tests:
       EfsThroughputMode: provisioned
       EfsProvisionedThroughputInMibps: 100
       EKSPublicAccessEndpoint: Enabled
+      NodeGroupType: 'Unmanaged'
     regions:
     - ap-east-1
   managed-node-group:
     parameters:
       AvailabilityZones: $[taskcat_genaz_3]
       ClusterAutoScaler: Disabled
-      NodeGroupType: 'Managed'
       EKSPublicAccessEndpoint: Enabled
     regions:
     - ap-south-1
@@ -55,6 +54,7 @@ tests:
       AvailabilityZones: $[taskcat_genaz_3]
       MonitoringStack: Prometheus + Grafana
       EKSPublicAccessEndpoint: Enabled
+      NodeGroupType: 'Unmanaged'
     regions:
     - ap-southeast-2
   2az:
@@ -62,6 +62,7 @@ tests:
       AvailabilityZones: $[taskcat_genaz_2]
       NumberOfAZs: "2"
       EKSPublicAccessEndpoint: Enabled
+      NodeGroupType: 'Unmanaged'
     regions:
     - ca-central-1
     - cn-north-1
@@ -72,6 +73,7 @@ tests:
       NumberOfAZs: "2"
       EKSClusterLoggingTypes: ""
       EKSPublicAccessEndpoint: Enabled
+      NodeGroupType: 'Unmanaged'
     regions:
     - eu-west-1
   with-hybrid:
@@ -79,6 +81,7 @@ tests:
       AvailabilityZones: $[taskcat_genaz_3]
       ClusterAutoScaler: Disabled
       EKSPublicAccessEndpoint: Enabled
+      NodeGroupType: 'Unmanaged'
     regions:
     - us-west-2
   alb-ingress:
@@ -86,6 +89,7 @@ tests:
       AvailabilityZones: $[taskcat_genaz_3]
       ALBIngressController: Enabled
       EKSPublicAccessEndpoint: Disabled
+      NodeGroupType: 'Unmanaged'
     regions:
     - us-east-2
   fargate:
@@ -95,6 +99,7 @@ tests:
       FargateNamespaces: kube-system
       FargateLabels: 'app.kubernetes.io/name=aws-cluster-autoscaler'
       EKSPublicAccessEndpoint: Enabled
+      NodeGroupType: 'Unmanaged'
     regions:
     - us-east-1
   enable-oidc:
@@ -107,6 +112,7 @@ tests:
       NodeGroupOS: Bottlerocket
       NodeInstanceFamily: ARM
       NodeInstanceType: c6g.medium
+      NodeGroupType: 'Unmanaged'
   snyk:
     regions:
       - eu-west-3
@@ -127,7 +133,6 @@ tests:
     parameters:
       AvailabilityZones: $[taskcat_genaz_3]
       ClusterAutoScaler: Enabled
-      NodeGroupType: 'Managed'
       EKSPublicAccessEndpoint: Disabled
       TestSuite: Enabled
       ProvisionBastionHost: Disabled
