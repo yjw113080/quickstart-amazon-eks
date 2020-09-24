@@ -11,8 +11,6 @@ project:
     ProvisionBastionHost: Enabled
     NodeGroupType: 'Unmanaged'
     NodeInstanceFamily: Standard
-    PerRegionSharedResources: 'Yes'
-    PerAccountSharedResources: 'No'
   lambda_source_path: functions/source
   lambda_zip_path: functions/packages
   package_lambda: false
@@ -66,8 +64,8 @@ tests:
       EKSPublicAccessEndpoint: Enabled
     regions:
     - ca-central-1
-    #- cn-north-1
-    #- cn-northwest-1
+    - cn-north-1
+    - cn-northwest-1
   no-logging:
     parameters:
       AvailabilityZones: $[taskcat_genaz_2]
