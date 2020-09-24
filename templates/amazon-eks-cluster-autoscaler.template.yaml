@@ -34,7 +34,7 @@ Resources:
   ClusterAutoScalerPolicy:
     Type: AWS::IAM::Policy
     Properties:
-      PolicyName: cluster-autoscaler
+      PolicyName: !Sub 'cluster-as-${AWS::Region}-${NodeAutoScalingGroup}'
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -52,7 +52,6 @@ Resources:
             Resource: !Sub "arn:${AWS::Partition}:autoscaling:${AWS::Region}:${AWS::AccountId}:autoScalingGroup:*:autoScalingGroupName/${NodeAutoScalingGroup}"
       Roles:
         - !Ref NodeInstanceRoleName
-
   # Install auto-scaler helm chart
   AutoScalerHelmChart:
     DependsOn:
