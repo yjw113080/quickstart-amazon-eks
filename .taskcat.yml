@@ -10,7 +10,6 @@ project:
     QSS3BucketRegion: $[taskcat_current_region]
   lambda_source_path: functions/source
   lambda_zip_path: functions/packages
-  package_lambda: false
 tests:
   defaults:
     parameters:
@@ -143,5 +142,6 @@ tests:
       AvailabilityZones: $[taskcat_genaz_3]
       TestSuite: Enabled
       NodeGroupOS: Windows
+      NodeGroupType: 'Unmanaged'
     regions:
     - eu-north-1
