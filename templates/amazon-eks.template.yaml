@@ -609,7 +609,7 @@ Resources:
         SnykIntegrationId: !Ref SnykIntegrationId
         Namespace: snyk-monitor
   WindowsSupportStack:
-    DependsOn: NodeGroupStack
+    DependsOn: WindowsSupportNodeGroupStack
     Condition: EnableWindows
     Type: AWS::CloudFormation::Stack
     Properties:
