@@ -21,6 +21,10 @@ Parameters:
 Conditions:
   is17: !Equals [ !Ref KubernetesVersion, "1.17" ]
   is16: !Equals [ !Ref KubernetesVersion, "1.16" ]
+  # workaround for https://github.com/kubernetes/autoscaler/issues/3372
+  NeedsStaticList: !Or
+    - !Equals [!Ref 'AWS::Region', 'af-south-1']
+    - !Equals [!Ref 'AWS::Region', 'eu-south-1']
 Mappings:
   K8sVersionMap:
     "1.15":
@@ -73,6 +77,7 @@ Resources:
         - is17
         - k8s.gcr.io/autoscaling/cluster-autoscaler
         - !If [ is16, us.gcr.io/k8s-artifacts-prod/autoscaling/cluster-autoscaler, k8s.gcr.io/cluster-autoscaler ]
+        extraArgs.aws-use-static-instance-list: !If [NeedsStaticList, true, !Ref 'AWS::NoValue']
         rbac.create: true
         rbac.pspEnabled: true
         autoDiscovery.clusterName: !Ref EksClusterName
