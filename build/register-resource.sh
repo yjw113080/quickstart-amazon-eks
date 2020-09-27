@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TMP_BUCKET="eksqs-tmp-$(LC_CTYPE=C tr -dc 'a-z0-9' </dev/urandom | fold -w 16 | head -n 1)"
+TMP_BUCKET=false
 
 if [ "${RESOURCE_PATH}" == "" ] ; then
   echo RESOURCE_PATH must be specified to publish
@@ -17,6 +17,7 @@ fi
 
 EXIT=0
 if [ "${BUCKET}" == "" ] ; then
+    TMP_BUCKET="eksqs-tmp-$(LC_CTYPE=C tr -dc 'a-z0-9' </dev/urandom | fold -w 16 | head -n 1)"
     aws s3 mb s3://${TMP_BUCKET} --region ${REGION} --profile ${PROFILE}
     cat <<EOF > /tmp/policy.json
 {
@@ -31,18 +32,19 @@ if [ "${BUCKET}" == "" ] ; then
 }
 EOF
     aws s3api put-bucket-policy --bucket ${TMP_BUCKET} --policy file:///tmp/policy.json --region ${REGION} --profile ${PROFILE} || EXIT=$?
+    BUCKET=${TMP_BUCKET}
 fi
 
 build/lambda_package.sh ${RESOURCE_PATH} || EXIT=$?
 if [ $EXIT -eq 0 ]; then
-  aws s3 cp functions/packages/${RESOURCE_PATH}/${RESOURCE_FILE} s3://${TMP_BUCKET} --region ${REGION} --profile ${PROFILE} || EXIT=$?
+  aws s3 cp functions/packages/${RESOURCE_PATH}/${RESOURCE_FILE} s3://${BUCKET} --region ${REGION} --profile ${PROFILE} || EXIT=$?
 fi
 if [ $EXIT -eq 0 ]; then
   cur_resource=$(aws cloudformation describe-type --type RESOURCE --type-name ${RESOURCE_TYPE} --region ${REGION} --profile ${PROFILE})
   log_role_arn=$(echo $cur_resource | jq -r .LoggingConfig.LogRoleArn)
   log_group_name=$(echo $cur_resource | jq -r .LoggingConfig.LogGroupName)
   role_arn=$(echo $cur_resource | jq -r .ExecutionRoleArn)
-  token=$(aws cloudformation register-type --type "RESOURCE" --type-name ${RESOURCE_TYPE} --schema-handler-package s3://${TMP_BUCKET}/${RESOURCE_FILE} --logging-config LogRoleArn=${log_role_arn},LogGroupName=${log_group_name} --region ${REGION} --execution-role-arn ${role_arn} --profile ${PROFILE} --output text --query RegistrationToken || EXIT=$?)
+  token=$(aws cloudformation register-type --type "RESOURCE" --type-name ${RESOURCE_TYPE} --schema-handler-package s3://${BUCKET}/${RESOURCE_FILE} --logging-config LogRoleArn=${log_role_arn},LogGroupName=${log_group_name} --region ${REGION} --execution-role-arn ${role_arn} --profile ${PROFILE} --output text --query RegistrationToken || EXIT=$?)
 fi
 
 if [ $EXIT -eq 0 ] ; then
@@ -65,7 +67,7 @@ if [ $EXIT -eq 0 ] ; then
   done
   aws cloudformation set-type-default-version --arn ${TYPE_VERSION}  --region ${REGION} --profile ${PROFILE} || EXIT=$?
 fi
-if [ "${BUCKET}" == "" ] ; then
+if $TMP_BUCKET ; then
   aws s3 rb s3://${TMP_BUCKET} --region ${REGION} --profile ${PROFILE} --force || EXIT=$?
 fi
 exit ${EXIT}
