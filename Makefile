@@ -73,7 +73,7 @@ clean-aws:
 	PROFILE=$(PROFILE) build/clean-aws.sh "$(REGIONS)"
 
 taskcat:
-	PROFILE=$(PROFILE) TEST_NAMES=$(TEST_NAMES) REGIONS=$(REGIONS) taskcat -q test run -mnl
+	TASKCAT_GENERAL_S3_REGIONAL_BUCKETS=false PROFILE=$(PROFILE) TEST_NAMES=$(TEST_NAMES) REGIONS=$(REGIONS) taskcat -q test run -mnl --skip-upload
 
 lint:
 	cfn-lint templates/*.yaml
