@@ -14,19 +14,17 @@ tests:
   defaults:
     parameters:
       AvailabilityZones: $[taskcat_genaz_3]
-      EKSPublicAccessEndpoint: Enabled
-      NodeGroupType: 'Unmanaged'
   public-endpoint:
     parameters:
       AvailabilityZones: $[taskcat_genaz_3]
-      EKSPublicAccessEndpoint: Disabled
+      EKSPublicAccessEndpoint: Enabled
+      ProvisionBastionHost: Disabled
     regions:
       - ap-northeast-2
   cluster-autoscaler:
     parameters:
       AvailabilityZones: $[taskcat_genaz_3]
       ClusterAutoScaler: Enabled
-      EKSPublicAccessEndpoint: Disabled
       NodeGroupType: 'Unmanaged'
     regions:
     - eu-central-1
@@ -78,7 +76,6 @@ tests:
   with-hybrid:
     parameters:
       AvailabilityZones: $[taskcat_genaz_3]
-      ClusterAutoScaler: Disabled
       EKSPublicAccessEndpoint: Enabled
       NodeGroupType: 'Unmanaged'
     regions:
@@ -87,7 +84,6 @@ tests:
     parameters:
       AvailabilityZones: $[taskcat_genaz_3]
       ALBIngressController: Enabled
-      EKSPublicAccessEndpoint: Disabled
       NodeGroupType: 'Unmanaged'
     regions:
     - us-east-2
@@ -132,9 +128,7 @@ tests:
     parameters:
       AvailabilityZones: $[taskcat_genaz_3]
       ClusterAutoScaler: Enabled
-      EKSPublicAccessEndpoint: Disabled
       TestSuite: Enabled
-      ProvisionBastionHost: Disabled
     regions:
     - af-south-1
   windows:
